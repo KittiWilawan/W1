@@ -11,7 +11,7 @@ const LoginCard = () => {
             </div>
 
             <div className="space-y-4 mb-8">
-                
+
                 <button className="w-full flex items-center justify-center space-x-3 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2.5 rounded-lg transition duration-200">
                     <SiLine className="w-6 h-6" />
                     <span>เข้าสู่ระบบด้วย LINE</span>
@@ -31,7 +31,7 @@ const LoginCard = () => {
 
             <form className="space-y-5">
 
-             
+
                 <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-1.5" htmlFor="email">
                         อีเมลผู้ใช้งาน
@@ -61,7 +61,7 @@ const LoginCard = () => {
                         <input type="checkbox" className="form-checkbox h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500" />
                         <span>จดจำฉัน</span>
                     </label>
-                    <a href="/forgot-password" className="text-sky-700 font-semibold hover:text-sky-800 transition">
+                    <a href="/forgotpassword" className="text-sky-700 font-semibold hover:text-sky-800 transition">
                         ลืมรหัสผ่าน?
                     </a>
                 </div>
