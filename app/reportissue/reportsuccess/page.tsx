@@ -13,7 +13,7 @@ export default function ReportConfirmation() {
 
     return (
         <div className="bg-[#f0f4fa] min-h-screen flex flex-col text-slate-800 font-sans">
-            <main className="flex-grow max-w-6xl w-full mx-auto p-4 md:py-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <main className="flex-grow max-w-6xl w-full mx-auto p-8 md:py-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <section className="md:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-10 flex flex-col justify-between">
                     <div>
                         <div className="w-14 h-14 bg-green-50 rounded-xl flex items-center justify-center border border-green-200 mb-6">
@@ -30,7 +30,7 @@ export default function ReportConfirmation() {
                             <div className="text-2xl md:text-3xl font-bold text-[#0f3460] mt-1 mb-4">{ticketId}</div>
                             <button
                                 onClick={handleCopyLink}
-                                className="w-full bg-[#0f3460] hover:bg-[#16447c] py-2.5 px-4 rounded-lg font-medium text-sm transition flex items-center justify-center space-x-2 shadow-sm"
+                                className="w-full bg-[#0f3460] hover:bg-[#16447c] text-white py-2.5 px-4 rounded-lg font-medium text-sm transition flex items-center justify-center space-x-2 shadow-sm"
                             >
                                 <Copy className="h-4 w-4" />
                                 <span>Copy Tracking Link</span>
@@ -40,12 +40,9 @@ export default function ReportConfirmation() {
 
                     {/* ปุ่มกดย้อนกลับ / ดูสถานะ */}
                     <div className="flex flex-wrap gap-4 mt-12 pt-6 border-t border-slate-100">
-                        <button className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+                        <a href="/Dashboard"><button className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
                             Back to Home
-                        </button>
-                        <button className="px-5 py-2.5 bg-[#0066cc] hover:bg-[#0052a3] text-white rounded-lg text-sm font-medium transition shadow-sm">
-                            View Live Status
-                        </button>
+                        </button></a>
                     </div>
                 </section>
 

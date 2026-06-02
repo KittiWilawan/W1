@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, Clock, Trash2, AlertCircle, FileText, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { Calendar, Clock, Trash2, AlertCircle, FileText, ChevronRight, Image as ImageIcon, ChevronLeft } from "lucide-react";
 
 interface Report {
   id: string;
@@ -63,21 +63,36 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex gap-4 justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#0F172A]">ประวัติการแจ้งเหตุของคุณ</h1>
           <p className="text-xs text-slate-500 font-medium">My Reported Issues History</p>
         </div>
-        <Link
-          href="/reportissue"
-          className="bg-[#3B82F6] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5"
-        >
-          <span>แจ้งเรื่องใหม่</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/Dashboard"
+            className="text-black text-xs 
+      font-bold px-4 py-2.5 
+      rounded-xl transition 
+      duration-200 shadow-md 
+      hover:shadow-lg 
+      active:scale-95 
+      flex items-center space-x-1.5"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Back to Home</span>
+          </Link>
 
+          <Link
+            href="/reportissue"
+            className="bg-[#3B82F6] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5"
+          >
+            <span>แจ้งเรื่องใหม่</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
       {reports.length > 0 ? (
         <div className="space-y-4">
           {reports.map((report) => (

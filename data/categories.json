@@ -30,5 +30,18 @@
       "คุณภาพน้ำ",
       "น้ำรั่ว"
     ]
+  },
+  {
+    "id": "7c55615d-7630-4982-88e1-b8b08be2c14a",
+    "title": "Weather",
+    "subtitle": "สภาพอากาศ",
+    "description": "แจ้งเหตุสภาพอากาศ",
+    "iconName": "Cloud",
+    "color": "#66a1ff",
+    "enabled": true,
+    "subcategories": [
+      "ฝนตกหนัก",
+      "ฟ้าผ่า"
+    ]
   }
 ]

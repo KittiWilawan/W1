@@ -43,13 +43,12 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Category Cards */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-7 h-7 text-slate-400 animate-spin" />
         </div>
       ) : categories.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {categories.map((cat) => {
             const IconComponent = ICON_MAP[cat.iconName];
             return (
@@ -60,7 +59,7 @@ export default function DashboardPage() {
                 icon={
                   IconComponent ? (
                     <IconComponent
-                      className="w-6 h-6"
+                      className="w-16 h-16"
                       style={{ color: cat.color }}
                     />
                   ) : null
@@ -83,7 +82,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Bottom section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-5 flex items-center justify-between border-b border-slate-100">

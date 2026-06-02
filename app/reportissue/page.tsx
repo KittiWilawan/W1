@@ -123,12 +123,22 @@ function ReportIssueForm() {
     }
 
     return (
+
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-5xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-sm font-bold text-slate-800 uppercase tracking-wider">รายงานปัญหาชุมชน</h1>
-                <p className="text-xs text-slate-500 mt-1">
-                    กรุณาแจ้งรายละเอียดปัญหาที่เกิดขึ้นในพื้นที่ของคุณ เพื่อการตรวจสอบและแก้ไขที่รวดเร็ว
-                </p>
+
+            <div className="flex justify-between items-start border-b border-slate-100 pb-6 mb-6">
+                <div>
+                    <h1 className="text-xl font-bold text-slate-900">รายงานปัญหาชุมชน</h1>
+                    <p className="text-sm text-slate-500 mt-1">
+                        กรุณาแจ้งรายละเอียดปัญหาที่เกิดขึ้นในพื้นที่ของคุณ เพื่อการตรวจสอบและแก้ไขที่รวดเร็ว
+                    </p>
+                </div>
+                <a href="/Dashboard">
+                    <button className="px-5 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition whitespace-nowrap">
+                        Back to Home
+                    </button>
+                </a>
+
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
@@ -292,57 +302,57 @@ function ReportIssueForm() {
                                 <Send className="w-4 h-4 fill-white" />
                                 <span>ส่งรายงานปัญหา</span>
                             </button>
-                            <p className="text-center text-[11px] text-slate-400 mt-3">
-                                ข้อมูลของคุณจะถูกส่งไปยังหน่วยงานที่เกี่ยวข้องโดยตรง
-                            </p>
                         </div>
                     </form>
                 </div>
+
             </div>
 
             {/* Success Modal */}
             {/* Success Modal */}
-            {showSuccessModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                    {/* Backdrop (พื้นหลังมืดเบลอ) */}
-                    <div
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_200ms_ease-out]"
-                        onClick={() => setShowSuccessModal(false)} // ป้องกันการกดปิดด้านหลัง (ถ้าต้องการ)
-                    />
+            {
+                showSuccessModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                        {/* Backdrop (พื้นหลังมืดเบลอ) */}
+                        <div
+                            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_200ms_ease-out]"
+                            onClick={() => setShowSuccessModal(false)} // ป้องกันการกดปิดด้านหลัง (ถ้าต้องการ)
+                        />
 
-                    {/* Modal Content Box (กล่องข้อความกลางจอ) */}
-                    <div className="relative bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border border-slate-100 z-10 my-auto animate-[scaleUp_250ms_ease-out]">
-                        <div className="mx-auto w-16 h-16 bg-emerald-50 text-[#2B7A3E] rounded-full flex items-center justify-center mb-4">
-                            <CheckCircle className="w-10 h-10" />
-                        </div>
-                        <h3 className="text-xl font-bold text-[#0F172A]">ส่งรายงานปัญหาสำเร็จ!</h3>
-                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                            ระบบได้รับรายงานเรื่องเรียบร้อยแล้ว เจ้าหน้าที่ที่เกี่ยวข้องจะเร่งดำเนินการตรวจสอบและแก้ไขโดยเร็วที่สุด คุณสามารถติดตามสถานะของปัญหาได้ที่หน้าประวัติ
-                        </p>
+                        {/* Modal Content Box (กล่องข้อความกลางจอ) */}
+                        <div className="relative bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border border-slate-100 z-10 my-auto animate-[scaleUp_250ms_ease-out]">
+                            <div className="mx-auto w-16 h-16 bg-emerald-50 text-[#2B7A3E] rounded-full flex items-center justify-center mb-4">
+                                <CheckCircle className="w-10 h-10" />
+                            </div>
+                            <h3 className="text-xl font-bold text-[#0F172A]">ส่งรายงานปัญหาสำเร็จ!</h3>
+                            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                                ระบบได้รับรายงานเรื่องเรียบร้อยแล้ว เจ้าหน้าที่ที่เกี่ยวข้องจะเร่งดำเนินการตรวจสอบและแก้ไขโดยเร็วที่สุด คุณสามารถติดตามสถานะของปัญหาได้ที่หน้าประวัติ
+                            </p>
 
-                        <div className="mt-6 flex flex-col space-y-2">
-                            <button
-                                onClick={() => {
-                                    setShowSuccessModal(false);
-                                    router.push("/reportissue/historys");
-                                }}
-                                className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-sm py-3.5 rounded-xl transition duration-200"
-                            >
-                                ดูประวัติการแจ้งเหตุ
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowSuccessModal(false);
-                                    resetForm();
-                                }}
-                                className="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-sm py-3.5 rounded-xl transition duration-200"
-                            >
-                                แจ้งปัญหาอื่นเพิ่มเติม
-                            </button>
+                            <div className="mt-6 flex flex-col space-y-2">
+                                <button
+                                    onClick={() => {
+                                        setShowSuccessModal(false);
+                                        router.push("/reportissue/historys");
+                                    }}
+                                    className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-sm py-3.5 rounded-xl transition duration-200"
+                                >
+                                    ดูประวัติการแจ้งเหตุ
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowSuccessModal(false);
+                                        resetForm();
+                                    }}
+                                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-sm py-3.5 rounded-xl transition duration-200"
+                                >
+                                    แจ้งปัญหาอื่นเพิ่มเติม
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <style jsx>{`
                 @keyframes scaleUp {
@@ -354,7 +364,7 @@ function ReportIssueForm() {
                     to { opacity: 1; }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
 
