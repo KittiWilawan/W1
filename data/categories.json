@@ -1,0 +1,62 @@
+[
+  {
+    "id": "electricity",
+    "title": "Electricity",
+    "subtitle": "ไฟฟ้า",
+    "description": "แจ้งเหตุไฟฟ้าขัดข้อง ไฟทางดับ หรือหม้อแปลงมีปัญหา",
+    "iconName": "Zap",
+    "color": "#F59E0B",
+    "enabled": true,
+    "subcategories": [
+      "ไฟดับ",
+      "หม้อแปลงระเบิด",
+      "ไฟทางดับ",
+      "สายไฟขาด",
+      "ไฟฟ้าลัดวงจร"
+    ]
+  },
+  {
+    "id": "water",
+    "title": "Water",
+    "subtitle": "น้ำประปา",
+    "description": "แจ้งเหตุท่อประปาแตก คุณภาพน้ำประปา หรือปัญหาด้านการกระจายน้ำต่างๆ",
+    "iconName": "Droplet",
+    "color": "#3B82F6",
+    "enabled": true,
+    "subcategories": [
+      "น้ำไม่ไหล",
+      "น้ำมีสี",
+      "ท่อแตก",
+      "คุณภาพน้ำ",
+      "น้ำรั่ว"
+    ]
+  },
+  {
+    "id": "road",
+    "title": "Road Damages",
+    "subtitle": "ถนน",
+    "description": "แจ้งหลุมบ่อ ทางเท้าชำรุด หรือขยะอุดตันทางระบายน้ำ",
+    "iconName": "Road",
+    "color": "#64748B",
+    "enabled": true,
+    "subcategories": [
+      "หลุมบ่อ",
+      "ทางเท้าชำรุด",
+      "ท่อระบายน้ำ"
+    ]
+  },
+  {
+    "id": "263f76fa-832b-4578-b83c-0d336109b94f",
+    "title": "Car",
+    "subtitle": "รถยนต์",
+    "description": "แจ้งเหตุเกี่ยวกับรถยนต์",
+    "iconName": "Car",
+    "color": "#105",
+    "enabled": true,
+    "subcategories": [
+      "รถชน",
+      "รถเสีย",
+      "ยางแตก"
+    ]
+  }
+]
