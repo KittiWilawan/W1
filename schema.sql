@@ -1,0 +1,135 @@
+-- 1. Create Profiles Table (extends auth.users)
+create table if not exists public.profiles (
+  id uuid references auth.users on delete cascade primary key,
+  email text,
+  phone text,
+  role text default 'normaluser' check (role in ('normaluser', 'admin')),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS on profiles
+alter table public.profiles enable row level security;
+
+-- Policies for profiles
+create policy "Allow public read access to profiles" on public.profiles
+  for select using (true);
+
+create policy "Allow individual insert of profiles" on public.profiles
+  for insert with check (auth.uid() = id);
+
+create policy "Allow individual update of profiles" on public.profiles
+  for update using (auth.uid() = id);
+
+
+-- 2. Create Trigger to Auto-create Profile on auth.users Sign Up
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, phone, role)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'phone',
+    coalesce(new.raw_user_meta_data->>'role', 'normaluser')
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Remove the trigger if it already exists
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+
+-- 3. Create Categories Table
+create table if not exists public.categories (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  subtitle text,
+  description text,
+  icon_name text not null,
+  color text not null,
+  enabled boolean default true,
+  subcategories text[] default '{}'::text[]
+);
+
+-- Enable RLS on categories
+alter table public.categories enable row level security;
+
+-- Policies for categories
+create policy "Allow public read access to categories" on public.categories
+  for select using (true);
+
+create policy "Allow admin write/update access to categories" on public.categories
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- Populate initial categories
+insert into public.categories (id, title, subtitle, description, icon_name, color, enabled, subcategories)
+values 
+  ('a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', 'Electricity', 'ไฟฟ้า', 'แจ้งเหตุไฟฟ้าขัดข้อง ไฟทางดับ หรือหม้อแปลงมีปัญหา', 'Zap', '#F59E0B', true, array['ไฟดับ', 'หม้อแปลงระเบิด', 'ไฟทางดับ', 'สายไฟขาด', 'ไฟฟ้าลัดวงจร']),
+  ('b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e', 'Water', 'น้ำประปา', 'แจ้งเหตุท่อประปาแตก คุณภาพน้ำประปา หรือปัญหาด้านการกระจายน้ำต่างๆ', 'Droplet', '#3B82F6', true, array['น้ำไม่ไหล', 'น้ำมีสี', 'ท่อแตก', 'คุณภาพน้ำ', 'น้ำรั่ว']),
+  ('7c55615d-7630-4982-88e1-b8b08be2c14a', 'Weather', 'สภาพอากาศ', 'แจ้งเหตุสภาพอากาศ', 'Cloud', '#66a1ff', true, array['ฝนตกหนัก', 'ฟ้าผ่า'])
+on conflict (id) do nothing;
+
+
+-- 4. Create Reports Table
+create table if not exists public.reports (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade,
+  category_id text,
+  category_title text,
+  category_color text,
+  subcategory text,
+  description text not null,
+  contact text,
+  image text, -- Store base64 or storage url
+  status text default 'รอดำเนินการ' check (status in ('รอดำเนินการ', 'กำลังดำเนินการ', 'เสร็จสิ้น')),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS on reports
+alter table public.reports enable row level security;
+
+-- Policies for reports
+create policy "Allow read access to reports based on owner or admin role" on public.reports
+  for select using (
+    auth.uid() = user_id or 
+    exists (
+      select 1 from public.profiles 
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Allow users to insert their own reports" on public.reports
+  for insert with check (auth.uid() = user_id);
+
+create policy "Allow owners to delete their own reports or admins to delete any" on public.reports
+  for delete using (
+    auth.uid() = user_id or
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Allow admins to update reports" on public.reports
+  for update using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );

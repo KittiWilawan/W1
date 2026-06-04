@@ -2,7 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, Clock, Trash2, AlertCircle, FileText, ChevronRight, Image as ImageIcon, ChevronLeft } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Trash2,
+  AlertCircle,
+  FileText,
+  ChevronRight,
+  Image as ImageIcon,
+  ChevronLeft,
+} from "lucide-react";
+import { createClient } from "@/app/lib/supabase";
 
 interface Report {
   id: string;
@@ -21,25 +31,59 @@ export default function HistoryPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load reports from localStorage
+  // Load reports from Supabase
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("citizen_reports");
-      if (stored) {
-        setReports(JSON.parse(stored));
+    const fetchReports = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("reports")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Failed to load reports:", error.message);
+          return;
+        }
+
+        // Format database structure to frontend structure
+        const formatted: Report[] = (data || []).map((item: any) => ({
+          id: item.id,
+          categoryId: item.category_id,
+          categoryTitle: item.category_title,
+          categoryColor: item.category_color,
+          subcategory: item.subcategory,
+          description: item.description,
+          contact: item.contact,
+          image: item.image,
+          status: item.status,
+          timestamp: new Date(item.created_at).toLocaleString("th-TH"),
+        }));
+
+        setReports(formatted);
+      } catch (err) {
+        console.error("Failed to load reports from database:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to load reports from local storage:", err);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    fetchReports();
   }, []);
 
-  const handleDeleteReport = (id: string) => {
+  const handleDeleteReport = async (id: string) => {
     if (confirm("คุณต้องการลบประวัติการแจ้งเหตุนี้ใช่หรือไม่?")) {
-      const updated = reports.filter((r) => r.id !== id);
-      setReports(updated);
-      localStorage.setItem("citizen_reports", JSON.stringify(updated));
+      try {
+        const supabase = createClient();
+        const { error } = await supabase.from("reports").delete().eq("id", id);
+        if (error) {
+          alert("ไม่สามารถลบข้อมูลได้: " + error.message);
+          return;
+        }
+        setReports(reports.filter((r) => r.id !== id));
+      } catch (err: any) {
+        alert("เกิดข้อผิดพลาดในการลบประวัติ");
+      }
     }
   };
 
@@ -66,19 +110,17 @@ export default function HistoryPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex gap-4 justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">ประวัติการแจ้งเหตุของคุณ</h1>
-          <p className="text-xs text-slate-500 font-medium">My Reported Issues History</p>
+          <h1 className="text-2xl font-bold text-[#0F172A]">
+            ประวัติการแจ้งเหตุของคุณ
+          </h1>
+          <p className="text-xs text-slate-500 font-medium">
+            My Reported Issues History
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/Dashboard"
-            className="text-black text-xs 
-      font-bold px-4 py-2.5 
-      rounded-xl transition 
-      duration-200 shadow-md 
-      hover:shadow-lg 
-      active:scale-95 
-      flex items-center space-x-1.5"
+            className="text-black text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5 cursor-pointer bg-white border border-slate-200"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Back to Home</span>
@@ -86,7 +128,7 @@ export default function HistoryPage() {
 
           <Link
             href="/reportissue"
-            className="bg-[#3B82F6] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5"
+            className="bg-[#3B82F6] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5 cursor-pointer"
           >
             <span>แจ้งเรื่องใหม่</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -100,7 +142,7 @@ export default function HistoryPage() {
               key={report.id}
               className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col md:flex-row"
             >
-              {/* Image Preview (Left side on md+, Top side on mobile) */}
+              {/* Image Preview */}
               {report.image ? (
                 <div className="w-full md:w-48 h-48 md:h-auto relative shrink-0">
                   <img
@@ -112,7 +154,9 @@ export default function HistoryPage() {
               ) : (
                 <div className="w-full md:w-48 h-32 md:h-auto bg-slate-50 border-r border-slate-100 flex flex-col items-center justify-center text-slate-300 space-y-1.5 p-4 shrink-0">
                   <ImageIcon className="w-8 h-8" />
-                  <span className="text-[10px] font-semibold text-slate-400">ไม่มีรูปภาพแนบ</span>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    ไม่มีรูปภาพแนบ
+                  </span>
                 </div>
               )}
 
@@ -175,7 +219,7 @@ export default function HistoryPage() {
                   {/* Actions */}
                   <button
                     onClick={() => handleDeleteReport(report.id)}
-                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95"
+                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95 cursor-pointer"
                     title="ลบออกจากประวัติ"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -190,14 +234,17 @@ export default function HistoryPage() {
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h3 className="text-base font-bold text-slate-700">ยังไม่มีประวัติการแจ้งเหตุ</h3>
+          <h3 className="text-base font-bold text-slate-700">
+            ยังไม่มีประวัติการแจ้งเหตุ
+          </h3>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-            คุณยังไม่ได้สร้างรายงานแจ้งปัญหาการใช้งานสาธารณูปโภคใดๆ คุณสามารถเริ่มทำรายงานได้ง่ายๆ ตอนนี้
+            คุณยังไม่ได้สร้างรายงานแจ้งปัญหาการใช้งานสาธารณูปโภคใดๆ
+            คุณสามารถเริ่มทำรายงานได้ง่ายๆ ตอนนี้
           </p>
           <div className="mt-6">
             <Link
               href="/reportissue"
-              className="bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition duration-200 shadow-md inline-block"
+              className="bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition duration-200 shadow-md inline-block cursor-pointer"
             >
               แจ้งรายงานปัญหาแรก
             </Link>

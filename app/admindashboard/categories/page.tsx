@@ -201,7 +201,7 @@ export default function CategoriesPage() {
             </div>
 
             <Link
-                href="/Dashboard/categories/new"
+                href="/admindashboard/categories/new"
                 className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-sm py-4 rounded-xl transition duration-200 flex items-center justify-center space-x-2 shadow-md active:scale-[0.99]"
             >
                 <PlusCircle className="w-5 h-5" />

@@ -73,7 +73,7 @@ export default function NewCategoryPage() {
                 throw new Error("Failed to save category");
             }
 
-            router.push("/Dashboard/categories");
+            router.push("/admindashboard/categories");
             router.refresh();
         } catch (err) {
             console.error(err);
@@ -92,7 +92,7 @@ export default function NewCategoryPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                     <Link
-                        href="/Dashboard/categories"
+                        href="/admindashboard/categories"
                         className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm active:scale-95"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -365,7 +365,7 @@ export default function NewCategoryPage() {
                     {/* Form Actions */}
                     <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
                         <Link
-                            href="/Dashboard/categories"
+                            href="/admindashboard/categories"
                             className="w-full sm:w-auto text-center px-6 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition active:scale-95"
                         >
                             ยกเลิก

@@ -1,32 +1,28 @@
 import { NextRequest } from "next/server";
-import fs from "fs";
-import path from "path";
-import type { Category } from "@/app/lib/types";
+import { createClient } from "@/app/lib/supabase-server";
 
-const DATA_PATH = path.join(process.cwd(), "data", "categories.json");
-
-function readCategories(): Category[] {
-  try {
-    const raw = fs.readFileSync(DATA_PATH, "utf-8");
-    return JSON.parse(raw) as Category[];
-  } catch {
-    return [];
-  }
-}
-
-function writeCategories(categories: Category[]) {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(categories, null, 2), "utf-8");
-}
-
-// GET — fetch all categories (optionally filter enabled only via ?enabled=true)
+// GET — fetch all categories
 export async function GET(request: NextRequest) {
-  const categories = readCategories();
+  const supabase = await createClient();
   const enabledOnly = request.nextUrl.searchParams.get("enabled");
 
+  let query = supabase.from("categories").select("*");
   if (enabledOnly === "true") {
-    return Response.json(categories.filter((c) => c.enabled));
+    query = query.eq("enabled", true);
   }
-  return Response.json(categories);
+
+  const { data, error } = await query;
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  // Format icon_name -> iconName for the frontend
+  const formatted = (data || []).map((cat: any) => ({
+    ...cat,
+    iconName: cat.icon_name,
+  }));
+
+  return Response.json(formatted);
 }
 
 // POST — add a new category
@@ -43,52 +39,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const categories = readCategories();
-    const newCategory: Category = {
-      id: crypto.randomUUID(),
-      title,
-      subtitle: subtitle || "",
-      description: description || "",
-      iconName,
-      color,
-      enabled: true,
-      subcategories: subcategories || [],
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({
+        title,
+        subtitle: subtitle || "",
+        description: description || "",
+        icon_name: iconName,
+        color,
+        enabled: true,
+        subcategories: subcategories || [],
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    const formatted = {
+      ...data,
+      iconName: data.icon_name,
     };
 
-    categories.push(newCategory);
-    writeCategories(categories);
-
-    return Response.json(newCategory, { status: 201 });
-  } catch {
+    return Response.json(formatted, { status: 201 });
+  } catch (err: any) {
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 }
 
-// PUT — update a category (toggle enabled, edit fields)
+// PUT — update a category
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id, iconName, ...updates } = body;
 
     if (!id) {
       return Response.json({ error: "id is required" }, { status: 400 });
     }
 
-    const categories = readCategories();
-    const index = categories.findIndex((c) => c.id === id);
-
-    if (index === -1) {
-      return Response.json(
-        { error: "Category not found" },
-        { status: 404 }
-      );
+    const mappedUpdates: any = { ...updates };
+    if (iconName !== undefined) {
+      mappedUpdates.icon_name = iconName;
     }
 
-    categories[index] = { ...categories[index], ...updates };
-    writeCategories(categories);
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("categories")
+      .update(mappedUpdates)
+      .eq("id", id)
+      .select()
+      .single();
 
-    return Response.json(categories[index]);
-  } catch {
+    if (error) {
+      return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    const formatted = {
+      ...data,
+      iconName: data.icon_name,
+    };
+
+    return Response.json(formatted);
+  } catch (err: any) {
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 }
@@ -98,16 +112,18 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
 
   if (!id) {
-    return Response.json({ error: "id query param is required" }, { status: 400 });
+    return Response.json(
+      { error: "id query param is required" },
+      { status: 400 }
+    );
   }
 
-  const categories = readCategories();
-  const filtered = categories.filter((c) => c.id !== id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("categories").delete().eq("id", id);
 
-  if (filtered.length === categories.length) {
-    return Response.json({ error: "Category not found" }, { status: 404 });
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
   }
 
-  writeCategories(filtered);
   return Response.json({ success: true });
 }
