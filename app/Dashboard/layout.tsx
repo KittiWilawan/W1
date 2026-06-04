@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Layers, Users, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -21,31 +21,6 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-800">
-
-      <aside className="w-64 bg-[#EEF2F6] border-r border-slate-200 flex flex-col pt-6 shrink-0">
-        <div className="px-6 mb-6">
-          <h2 className="text-sm font-bold text-slate-700">Admin Panel</h2>
-          <p className="text-xs text-slate-500">Manage Utility Data</p>
-        </div>
-
-        <nav className="flex-1 space-y-1 px-3">
-          <Link href="/Dashboard" className={getLinkClass('/Dashboard')}>
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link href="/Dashboard/categories" className={getLinkClass('/categories')}>
-            <Layers className="w-5 h-5" />
-            <span>Issue Categories</span>
-          </Link>
-
-          <Link href="/Dashboard/management" className={getLinkClass('/management')}>
-            <Users className="w-5 h-5" />
-            <span>Staff Management</span>
-          </Link>
-        </nav>
-      </aside>
-
       <div className="flex-1 flex flex-col min-w-0">
 
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8 shrink-0">
