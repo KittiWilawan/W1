@@ -3,13 +3,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Maximize2,
   Loader2,
   Image as ImageIcon,
   Calendar,
-  Clock,
   Trash2,
-  Check,
   AlertCircle,
 } from "lucide-react";
 import CategoryCard from "@/app/components/categorycard";
@@ -21,9 +18,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-
   const [reports, setReports] = useState<any[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -61,6 +58,27 @@ export default function DashboardPage() {
     fetchCategories();
     fetchReports();
   }, [fetchCategories, fetchReports]);
+
+  const handleLogout = async () => {
+    if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+      try {
+        setIsLoggingOut(true);
+        const supabase = createClient();
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+          alert("ไม่สามารถออกจากระบบได้: " + error.message);
+          return;
+        }
+        router.push("/");
+        router.refresh();
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการออกจากระบบ");
+      } finally {
+        setIsLoggingOut(false);
+      }
+    }
+  };
 
   const handleUpdateStatus = async (reportId: string, newStatus: string) => {
     try {
@@ -124,14 +142,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
 
-      <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">แผงควบคุมหลัก</h1>
-        <p className="text-slate-500 mt-1.5">
-          จัดการหมวดหมู่บริการ และตรวจสอบสถานะรายการแจ้งเหตุจากคนในชุมชน
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#0F172A]">แผงควบคุมหลัก</h1>
+          <p className="text-slate-500 mt-1.5">
+            จัดการหมวดหมู่บริการ และตรวจสอบสถานะรายการแจ้งเหตุจากคนในชุมชน
+          </p>
+        </div>
       </div>
 
-      {/* Categories Grid */}
       {loadingCategories ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-7 h-7 text-slate-400 animate-spin" />
@@ -169,7 +188,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Real-time map placeholder with dynamic stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-5 flex items-center justify-between border-b border-slate-100">
@@ -219,7 +237,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* List of Reports */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-bold text-[#0F172A] mb-4 border-b border-slate-100 pb-2">
@@ -287,15 +304,14 @@ export default function DashboardPage() {
                           </span>
                         </div>
 
-                        {/* Status Manager Dropdown / Buttons */}
                         <div className="flex items-center space-x-1.5">
                           <button
                             onClick={() =>
                               handleUpdateStatus(report.id, "รอดำเนินการ")
                             }
                             className={`px-2 py-1 rounded text-[9px] font-bold border transition cursor-pointer ${report.status === "รอดำเนินการ"
-                                ? "bg-amber-100 border-amber-300 text-amber-800"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
+                              ? "bg-amber-100 border-amber-300 text-amber-800"
+                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
                               }`}
                           >
                             รอ
@@ -305,8 +321,8 @@ export default function DashboardPage() {
                               handleUpdateStatus(report.id, "กำลังดำเนินการ")
                             }
                             className={`px-2 py-1 rounded text-[9px] font-bold border transition cursor-pointer ${report.status === "กำลังดำเนินการ"
-                                ? "bg-blue-100 border-blue-300 text-blue-800"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
+                              ? "bg-blue-100 border-blue-300 text-blue-800"
+                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
                               }`}
                           >
                             ทำอยู่
@@ -316,8 +332,8 @@ export default function DashboardPage() {
                               handleUpdateStatus(report.id, "เสร็จสิ้น")
                             }
                             className={`px-2 py-1 rounded text-[9px] font-bold border transition cursor-pointer ${report.status === "เสร็จสิ้น"
-                                ? "bg-emerald-100 border-emerald-300 text-emerald-800"
-                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
+                              ? "bg-emerald-100 border-emerald-300 text-emerald-800"
+                              : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
                               }`}
                           >
                             เสร็จ

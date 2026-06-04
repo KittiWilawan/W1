@@ -97,7 +97,6 @@ export default function ChangePasswordPage() {
               disabled={loading}
             />
           </div>
-
           <div className="space-y-2 text-left">
             <input
               type="password"
@@ -109,7 +108,6 @@ export default function ChangePasswordPage() {
               disabled={loading}
             />
           </div>
-
           <div className="pt-4 border-t border-slate-200 flex items-center justify-start space-x-3 bg-slate-50/50 -mx-6 -mb-6 p-4">
             <button
               type="submit"

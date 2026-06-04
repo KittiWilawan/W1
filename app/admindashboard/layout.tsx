@@ -1,9 +1,10 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Layers, Users, Bell } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, LogOut, LayoutDashboard, Layers } from "lucide-react";
+import { createClient } from "@/app/lib/supabase";
 
 export default function DashboardLayout({
     children,
@@ -11,6 +12,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const getLinkClass = (path: string) => {
         const baseClass = "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition duration-200 ";
         if (pathname === path) {
@@ -18,6 +20,13 @@ export default function DashboardLayout({
         }
         return baseClass + "text-slate-600 hover:bg-slate-200 hover:text-slate-900";
     };
+    const handleSignOut = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push("/");
+        router.refresh();
+    };
+
 
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans text-slate-800">
@@ -64,6 +73,13 @@ export default function DashboardLayout({
                             <Link href="/Dashboard/notification">
                                 <Bell className="w-6 h-6" />
                             </Link>
+                        </button>
+                        <button
+                            onClick={handleSignOut}
+                            className="flex items-center space-x-1 text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition duration-200 cursor-pointer font-semibold"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            <span className="hidden sm:inline">ออกจากระบบ</span>
                         </button>
                     </div>
                 </header>
