@@ -42,9 +42,19 @@ export default function HistoryPage() {
     const fetchReports = async () => {
       try {
         const supabase = createClient();
+
+        // --- ส่วนที่แก้ไข: ตรวจสอบการเข้าสู่ระบบ ---
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        // --- ส่วนที่แก้ไข: เพิ่ม .eq("user_id", user.id) เพื่อกรองข้อมูลเฉพาะของผู้ใช้คนนั้น ---
         const { data, error } = await supabase
           .from("reports")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (error) {
