@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/app/lib/supabase-server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,11 +12,27 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
-    .from("reports")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const allReports = request.nextUrl.searchParams.get("all") === "true";
+
+  if (allReports) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  let query = supabase.from("reports").select("*").order("created_at", { ascending: false });
+
+  if (!allReports) {
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });

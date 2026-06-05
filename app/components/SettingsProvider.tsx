@@ -1,7 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/app/lib/supabase";
+import { isAuthPage } from "@/app/lib/auth-pages";
 
 interface SettingsContextType {
   darkMode: boolean;
@@ -15,7 +17,24 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+function applyThemeToDocument(darkMode: boolean, largeText: boolean, pathname: string) {
+  if (isAuthPage(pathname)) {
+    document.documentElement.classList.remove("dark", "large-text");
+    document.documentElement.style.colorScheme = "light";
+    return;
+  }
+
+  document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
+
+  if (darkMode) document.documentElement.classList.add("dark");
+  else document.documentElement.classList.remove("dark");
+
+  if (largeText) document.documentElement.classList.add("large-text");
+  else document.documentElement.classList.remove("large-text");
+}
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [darkMode, setDarkModeState] = useState(false);
   const [largeText, setLargeTextState] = useState(false);
   const [language, setLanguageState] = useState<"th" | "en">("th");
@@ -33,13 +52,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setDarkModeState(localDark);
       setLargeTextState(localLarge);
       setLanguageState(localLang);
-
-      // Apply initial classes
-      if (localDark) document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-
-      if (localLarge) document.documentElement.classList.add("large-text");
-      else document.documentElement.classList.remove("large-text");
 
       try {
         const supabase = createClient();
@@ -59,14 +71,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             if (profile.dark_mode !== null) {
               setDarkModeState(profile.dark_mode);
               localStorage.setItem("settings_dark_mode", String(profile.dark_mode));
-              if (profile.dark_mode) document.documentElement.classList.add("dark");
-              else document.documentElement.classList.remove("dark");
             }
             if (profile.large_text !== null) {
               setLargeTextState(profile.large_text);
               localStorage.setItem("settings_large_text", String(profile.large_text));
-              if (profile.large_text) document.documentElement.classList.add("large-text");
-              else document.documentElement.classList.remove("large-text");
             }
             if (profile.language !== null) {
               const lang = profile.language as "th" | "en";
@@ -98,14 +106,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           if (profile.dark_mode !== null) {
             setDarkModeState(profile.dark_mode);
             localStorage.setItem("settings_dark_mode", String(profile.dark_mode));
-            if (profile.dark_mode) document.documentElement.classList.add("dark");
-            else document.documentElement.classList.remove("dark");
           }
           if (profile.large_text !== null) {
             setLargeTextState(profile.large_text);
             localStorage.setItem("settings_large_text", String(profile.large_text));
-            if (profile.large_text) document.documentElement.classList.add("large-text");
-            else document.documentElement.classList.remove("large-text");
           }
           if (profile.language !== null) {
             const lang = profile.language as "th" | "en";
@@ -123,11 +127,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    applyThemeToDocument(darkMode, largeText, pathname);
+  }, [darkMode, largeText, pathname]);
+
   const setDarkMode = async (val: boolean) => {
     setDarkModeState(val);
     localStorage.setItem("settings_dark_mode", String(val));
-    if (val) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
 
     if (userId) {
       const supabase = createClient();
@@ -138,8 +144,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const setLargeText = async (val: boolean) => {
     setLargeTextState(val);
     localStorage.setItem("settings_large_text", String(val));
-    if (val) document.documentElement.classList.add("large-text");
-    else document.documentElement.classList.remove("large-text");
 
     if (userId) {
       const supabase = createClient();

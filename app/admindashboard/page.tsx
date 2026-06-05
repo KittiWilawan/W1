@@ -15,7 +15,6 @@ import {
 import CategoryCard from "@/app/components/categorycard";
 import { ICON_MAP } from "@/app/lib/icons";
 import type { Category } from "@/app/lib/types";
-import { createClient } from "@/app/lib/supabase";
 import { useSettings } from "@/app/components/SettingsProvider";
 import { signOutUser } from "@/app/lib/sign-out";
 
@@ -49,17 +48,16 @@ function AdminDashboardPageContent() {
 
   const fetchReports = useCallback(async () => {
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("reports")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const res = await fetch("/api/reports?all=true");
 
-      if (error) {
-        console.error("Failed to fetch reports:", error.message);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("Failed to fetch reports:", body.error || res.statusText);
         return;
       }
-      setReports(data || []);
+
+      const data = await res.json();
+      setReports(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching reports:", err);
     } finally {
@@ -140,14 +138,13 @@ function AdminDashboardPageContent() {
   const handleDeleteReport = async (reportId: string) => {
     if (confirm("คุณต้องการลบรายงานปัญหานี้ออกจากระบบใช่หรือไม่?")) {
       try {
-        const supabase = createClient();
-        const { error } = await supabase
-          .from("reports")
-          .delete()
-          .eq("id", reportId);
+        const res = await fetch(`/api/reports?id=${encodeURIComponent(reportId)}`, {
+          method: "DELETE",
+        });
 
-        if (error) {
-          alert("ไม่สามารถลบรายงานได้: " + error.message);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert("ไม่สามารถลบรายงานได้: " + (body.error || res.statusText));
           return;
         }
 
