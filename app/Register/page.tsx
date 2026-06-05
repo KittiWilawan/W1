@@ -10,7 +10,7 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("normaluser");
+  const [role, setRole] = useState("member");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -52,7 +52,7 @@ const Register = () => {
       setPassword("");
       setConfirmPassword("");
       setPhone("");
-      setRole("normaluser");
+      setRole("member");
       setLoading(false);
     } catch (err: any) {
       setError(err.message || "เกิดข้อผิดพลาดในการสมัครสมาชิก");
@@ -169,7 +169,7 @@ const Register = () => {
               className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-sky-200 focus:border-sky-300 transition text-gray-900 bg-white"
               disabled={loading}
             >
-              <option value="normaluser">ผู้ใช้งานทั่วไป (Normal User)</option>
+              <option value="member">สมาชิก (Member)</option>
               <option value="admin">ผู้ดูแลระบบ (Admin)</option>
             </select>
           </div>

@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import ReportDetailModal from "@/app/components/ReportDetailModal";
 import {
   Calendar,
   Clock,
@@ -28,16 +30,20 @@ interface Report {
   image: string | null;
   status: string;
   timestamp: string;
+  createdAt: string;
 }
 
-export default function HistoryPage() {
+function HistoryPageContent() {
   const { language } = useSettings();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reportParam = searchParams.get("report");
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   // Load reports via server API (reads auth from cookies reliably)
   useEffect(() => {
@@ -74,6 +80,7 @@ export default function HistoryPage() {
           image: item.image,
           status: item.status,
           timestamp: new Date(item.created_at).toLocaleString("th-TH"),
+          createdAt: item.created_at,
         }));
 
         setReports(formatted);
@@ -92,6 +99,37 @@ export default function HistoryPage() {
     fetchReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, language]);
+
+  useEffect(() => {
+    if (!reportParam) return;
+
+    const found = reports.find((r) => r.id === reportParam);
+    if (found) {
+      setSelectedReport(found);
+      return;
+    }
+
+    const loadReport = async () => {
+      const res = await fetch(`/api/reports/${reportParam}`);
+      if (!res.ok) return;
+      const item = await res.json();
+      setSelectedReport({
+        id: item.id,
+        categoryId: item.category_id,
+        categoryTitle: item.category_title,
+        categoryColor: item.category_color,
+        subcategory: item.subcategory,
+        description: item.description,
+        contact: item.contact,
+        image: item.image,
+        status: item.status,
+        timestamp: new Date(item.created_at).toLocaleString("th-TH"),
+        createdAt: item.created_at,
+      });
+    };
+
+    loadReport();
+  }, [reportParam, reports]);
 
   const t = {
     confirmDelete:
@@ -134,6 +172,8 @@ export default function HistoryPage() {
       language === "th"
         ? "ไม่พบประวัติการแจ้งเหตุที่ตรงกับ"
         : "No history found matching",
+    viewDetails:
+      language === "th" ? "ดูรายละเอียด" : "View details",
   };
 
   const handleDeleteReport = async (id: string) => {
@@ -335,14 +375,21 @@ export default function HistoryPage() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <button
-                    onClick={() => handleDeleteReport(report.id)}
-                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95 cursor-pointer"
-                    title={t.deleteTooltip}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedReport(report)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      {t.viewDetails}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteReport(report.id)}
+                      className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95 cursor-pointer"
+                      title={t.deleteTooltip}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -377,6 +424,44 @@ export default function HistoryPage() {
           </div>
         </div>
       )}
+
+      {selectedReport && (
+        <ReportDetailModal
+          report={{
+            id: selectedReport.id,
+            category_title: selectedReport.categoryTitle,
+            category_color: selectedReport.categoryColor,
+            subcategory: selectedReport.subcategory,
+            description: selectedReport.description,
+            contact: selectedReport.contact,
+            image: selectedReport.image,
+            status: selectedReport.status,
+            created_at: selectedReport.createdAt,
+          }}
+          language={language}
+          onClose={() => {
+            setSelectedReport(null);
+            if (reportParam) {
+              router.replace("/reportissue/historys");
+            }
+          }}
+          getStatusClass={getStatusClass}
+        />
+      )}
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        </div>
+      }
+    >
+      <HistoryPageContent />
+    </Suspense>
   );
 }

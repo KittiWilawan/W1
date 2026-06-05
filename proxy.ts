@@ -36,7 +36,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const role = user?.user_metadata?.role || "normaluser";
+  const rawRole = user?.user_metadata?.role || "member";
+  const role = rawRole === "normaluser" ? "member" : rawRole;
 
   // General auth protection
   const isProtectedRoute =

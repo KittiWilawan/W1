@@ -23,7 +23,7 @@ export async function GET() {
       id: user.id,
       email: user.email,
       phone: user.user_metadata?.phone || "",
-      role: user.user_metadata?.role || "normaluser",
+      role: user.user_metadata?.role === "normaluser" ? "member" : user.user_metadata?.role || "member",
       created_at: user.created_at,
       display_name: "",
       avatar_url: "",

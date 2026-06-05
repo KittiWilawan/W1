@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import React, { Suspense, useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Loader2,
   Image as ImageIcon,
@@ -17,9 +17,12 @@ import { ICON_MAP } from "@/app/lib/icons";
 import type { Category } from "@/app/lib/types";
 import { createClient } from "@/app/lib/supabase";
 import { useSettings } from "@/app/components/SettingsProvider";
+import { signOutUser } from "@/app/lib/sign-out";
 
-export default function DashboardPage() {
+function AdminDashboardPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reportParam = searchParams.get("report");
   const { language } = useSettings();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -69,17 +72,30 @@ export default function DashboardPage() {
     fetchReports();
   }, [fetchCategories, fetchReports]);
 
+  useEffect(() => {
+    if (!reportParam) return;
+
+    const found = reports.find((r) => r.id === reportParam);
+    if (found) {
+      setSelectedReportForDetail(found);
+      return;
+    }
+
+    const loadReport = async () => {
+      const res = await fetch(`/api/reports/${reportParam}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setSelectedReportForDetail(data);
+    };
+
+    loadReport();
+  }, [reportParam, reports]);
+
   const handleLogout = async () => {
     if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
       try {
         setIsLoggingOut(true);
-        const supabase = createClient();
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-          alert("ไม่สามารถออกจากระบบได้: " + error.message);
-          return;
-        }
+        await signOutUser();
         router.push("/");
         router.refresh();
       } catch (err) {
@@ -92,35 +108,32 @@ export default function DashboardPage() {
 
   const handleUpdateStatus = async (reportId: string, newStatus: string) => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("reports")
-        .update({ status: newStatus })
-        .eq("id", reportId);
+      const res = await fetch(`/api/reports/${reportId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
-      if (error) {
-        alert("ไม่สามารถอัปเดตสถานะได้: " + error.message);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(
+          (language === "th" ? "ไม่สามารถอัปเดตสถานะได้: " : "Failed to update status: ") +
+            (body.error || res.statusText)
+        );
         return;
       }
 
-      // Find the report to get owner info
-      const report = reports.find((r) => r.id === reportId);
-      if (report && report.user_id) {
-        // Send notification to the report owner (client)
-        await supabase.from("notifications").insert({
-          user_id: report.user_id,
-          title: "อัปเดตสถานะแจ้งเหตุ",
-          content: `รายการ "${report.subcategory || report.category_title}" ถูกเปลี่ยนสถานะเป็น "${newStatus}"`,
-          report_id: reportId,
-          read: false,
-        });
-      }
-
+      const updated = await res.json();
       setReports((prev) =>
-        prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
+        prev.map((r) => (r.id === reportId ? { ...r, status: updated.status } : r))
       );
-    } catch (err: any) {
-      alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+      if (selectedReportForDetail?.id === reportId) {
+        setSelectedReportForDetail((prev: any) =>
+          prev ? { ...prev, status: updated.status } : prev
+        );
+      }
+    } catch {
+      alert(language === "th" ? "เกิดข้อผิดพลาดในการอัปเดตสถานะ" : "Error updating status");
     }
   };
 
@@ -599,14 +612,20 @@ export default function DashboardPage() {
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_200ms_ease-out]"
-            onClick={() => setSelectedReportForDetail(null)}
+            onClick={() => {
+              setSelectedReportForDetail(null);
+              if (reportParam) router.replace("/admindashboard");
+            }}
           />
 
           {/* Modal Content Box */}
           <div className="relative bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-slate-100 z-10 my-auto animate-[scaleUp_250ms_ease-out] flex flex-col md:flex-row gap-6 max-h-[90vh] overflow-y-auto">
             {/* Close Button */}
             <button
-              onClick={() => setSelectedReportForDetail(null)}
+              onClick={() => {
+                setSelectedReportForDetail(null);
+                if (reportParam) router.replace("/admindashboard");
+              }}
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -748,5 +767,19 @@ export default function DashboardPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+        </div>
+      }
+    >
+      <AdminDashboardPageContent />
+    </Suspense>
   );
 }

@@ -21,8 +21,9 @@ import {
   FileText,
   AlertCircle,
 } from 'lucide-react';
-import { createClient } from '@/app/lib/supabase';
 import { useSettings } from "@/app/components/SettingsProvider";
+import { signOutUser } from "@/app/lib/sign-out";
+import { getRoleLabel } from "@/app/lib/roles";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -68,11 +69,16 @@ export default function ProfilePage() {
   }, [router, language]);
 
   const handleSignOut = async () => {
-    if (confirm(language === 'th' ? "คุณต้องการออกจากระบบใช่หรือไม่?" : "Are you sure you want to log out?")) {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+    if (!confirm(language === 'th' ? "คุณต้องการออกจากระบบใช่หรือไม่?" : "Are you sure you want to log out?")) {
+      return;
+    }
+
+    try {
+      await signOutUser();
       router.push('/');
       router.refresh();
+    } catch {
+      alert(language === 'th' ? "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง" : "Could not sign out. Please try again.");
     }
   };
 
@@ -226,7 +232,7 @@ export default function ProfilePage() {
           )}
           <div>
             <span className={`${subSizeClass} text-slate-400 block`}>{t.roleLabel}</span>
-            <span className="font-semibold capitalize">{profile?.role || 'normaluser'}</span>
+            <span className="font-semibold">{getRoleLabel(profile?.role, language)}</span>
           </div>
           {profile?.address && (
             <div className="col-span-2">

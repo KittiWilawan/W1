@@ -3,7 +3,7 @@ create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
   phone text,
-  role text default 'normaluser' check (role in ('normaluser', 'admin')),
+  role text default 'member' check (role in ('member', 'admin')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -30,7 +30,7 @@ begin
     new.id,
     new.email,
     new.raw_user_meta_data->>'phone',
-    coalesce(new.raw_user_meta_data->>'role', 'normaluser')
+    coalesce(nullif(new.raw_user_meta_data->>'role', 'normaluser'), 'member')
   );
   return new;
 end;
@@ -187,3 +187,10 @@ create policy "Users can delete their own notifications" on public.notifications
 
 grant select, insert, update, delete on public.notifications to authenticated;
 grant select on public.notifications to anon;
+
+
+-- 8. Migrate legacy normaluser role to member
+alter table public.profiles drop constraint if exists profiles_role_check;
+update public.profiles set role = 'member' where role = 'normaluser' or role is null;
+alter table public.profiles alter column role set default 'member';
+alter table public.profiles add constraint profiles_role_check check (role in ('member', 'admin'));
