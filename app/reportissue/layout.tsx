@@ -18,25 +18,15 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
     const fetchUserAndNotifications = async () => {
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
 
-        if (authError || !user) {
-          router.push("/");
-          return;
-        }
-
-        setUser(user);
-
+      if (user) {
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
@@ -50,37 +40,25 @@ export default function DashboardLayout({
           .eq("user_id", user.id)
           .eq("read", false);
         setUnreadCount(count || 0);
-      } catch (err) {
-        console.error("Layout auth error:", err);
-      } finally {
-        setAuthChecked(true);
       }
     };
 
     fetchUserAndNotifications();
 
     const interval = setInterval(async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { count } = await supabase
-            .from("notifications")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .eq("read", false);
-          setUnreadCount(count || 0);
-        }
-      } catch {
-        // Silently ignore polling errors
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { count } = await supabase
+          .from("notifications")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("read", false);
+        setUnreadCount(count || 0);
       }
     }, 30000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        router.push("/");
-      } else {
-        setUser(session.user);
-      }
+      setUser(session?.user ?? null);
     });
 
     return () => {
@@ -133,14 +111,6 @@ export default function DashboardLayout({
     profile: language === "th" ? "โปรไฟล์" : "Profile",
     logout: language === "th" ? "ออกจากระบบ" : "Logout",
   };
-
-  if (!authChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-      </div>
-    );
-  }
 
   return (
     <div className={`min-h-screen flex flex-col font-sans relative transition-colors duration-300 ${darkMode ? "bg-slate-900 text-slate-100" : "bg-slate-50 text-slate-800"}`}>

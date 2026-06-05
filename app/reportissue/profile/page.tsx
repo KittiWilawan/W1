@@ -18,7 +18,8 @@ import {
   Settings,
   Camera,
   MapPin,
-  FileText
+  FileText,
+  AlertCircle,
 } from 'lucide-react';
 import { createClient } from '@/app/lib/supabase';
 import { useSettings } from "@/app/components/SettingsProvider";
@@ -28,48 +29,43 @@ export default function ProfilePage() {
   const { darkMode, largeText, language, setDarkMode, setLargeText, setLanguage } = useSettings();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const supabase = createClient();
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          router.push('/');
+        const res = await fetch("/api/profile");
+
+        if (res.status === 401) {
+          router.push("/");
           return;
         }
 
-        // Fetch user profile from database table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          setProfile({
-            id: user.id,
-            email: user.email,
-            phone: user.user_metadata?.phone || '',
-            role: user.user_metadata?.role || 'normaluser',
-            created_at: user.created_at,
-            display_name: '',
-            avatar_url: '',
-            address: '',
-            bio: '',
-          });
-        } else {
-          setProfile(profileData);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(
+            language === "th"
+              ? "ไม่สามารถโหลดโปรไฟล์ได้: " + (body.error || res.statusText)
+              : "Failed to load profile: " + (body.error || res.statusText)
+          );
+          return;
         }
+
+        setProfile(await res.json());
       } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error("Error fetching profile:", err);
+        setError(
+          language === "th"
+            ? "เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์"
+            : "An error occurred while loading profile"
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [router]);
+  }, [router, language]);
 
   const handleSignOut = async () => {
     if (confirm(language === 'th' ? "คุณต้องการออกจากระบบใช่หรือไม่?" : "Are you sure you want to log out?")) {
@@ -85,6 +81,21 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
         <p className="text-slate-500 text-sm font-medium">กำลังโหลดข้อมูลโปรไฟล์...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3 text-center px-4">
+        <AlertCircle className="w-10 h-10 text-red-400" />
+        <p className="text-slate-600 text-sm font-medium">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="text-blue-500 text-xs underline cursor-pointer"
+        >
+          {language === "th" ? "ลองใหม่" : "Try again"}
+        </button>
       </div>
     );
   }

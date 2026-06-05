@@ -15,7 +15,6 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { createClient } from "@/app/lib/supabase";
 import { useSettings } from "@/app/components/SettingsProvider";
 
 interface Report {
@@ -40,38 +39,28 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Load reports from Supabase
+  // Load reports via server API (reads auth from cookies reliably)
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const supabase = createClient();
+        const res = await fetch("/api/reports");
 
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-          // Not logged in — redirect to login
+        if (res.status === 401) {
           router.push("/");
           return;
         }
 
-        const { data, error: fetchError } = await supabase
-          .from("reports")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (fetchError) {
-          console.error("Failed to load reports:", fetchError.message);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
           setError(
             language === "th"
-              ? "ไม่สามารถโหลดประวัติได้: " + fetchError.message
-              : "Failed to load history: " + fetchError.message
+              ? "ไม่สามารถโหลดประวัติได้: " + (body.error || res.statusText)
+              : "Failed to load history: " + (body.error || res.statusText)
           );
           return;
         }
+
+        const data = await res.json();
 
         // Format database structure to frontend structure
         const formatted: Report[] = (data || []).map((item: any) => ({
@@ -150,17 +139,16 @@ export default function HistoryPage() {
   const handleDeleteReport = async (id: string) => {
     if (confirm(t.confirmDelete)) {
       try {
-        const supabase = createClient();
-        const { error: deleteError } = await supabase
-          .from("reports")
-          .delete()
-          .eq("id", id);
-        if (deleteError) {
-          alert(t.deleteError + deleteError.message);
+        const res = await fetch(`/api/reports?id=${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert(t.deleteError + (body.error || res.statusText));
           return;
         }
         setReports((prev) => prev.filter((r) => r.id !== id));
-      } catch (err: any) {
+      } catch {
         alert(t.deleteErrorCatch);
       }
     }
