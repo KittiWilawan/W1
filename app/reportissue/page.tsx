@@ -12,7 +12,6 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Category } from "@/app/lib/types";
-import { createClient } from "@/app/lib/supabase";
 import { useSettings } from "@/app/components/SettingsProvider";
 
 // Compress image to JPEG at reduced quality/size to stay within Supabase row limits
@@ -171,18 +170,6 @@ function ReportIssueForm() {
     setSaving(true);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        alert(t.loginFirst);
-        setSaving(false);
-        return;
-      }
-
       // Prepare image: if present, compress further to ensure it fits in the DB row
       let imageToStore: string | null = null;
       if (selectedImage) {
@@ -193,10 +180,10 @@ function ReportIssueForm() {
         }
       }
 
-      const { data: reportData, error: insertError } = await supabase
-        .from("reports")
-        .insert({
-          user_id: user.id,
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           category_id: selectedCategoryId,
           category_title: currentCategory
             ? `${currentCategory.subtitle} (${currentCategory.title})`
@@ -206,44 +193,27 @@ function ReportIssueForm() {
           description: description.trim(),
           contact: contact.trim(),
           image: imageToStore,
-          status: "รอดำเนินการ",
-        })
-        .select("id")
-        .single();
+          notification_title: t.newReportTitle,
+          notification_content: t.newReportContent(
+            selectedSubcategory,
+            contact.trim(),
+            description.trim()
+          ),
+        }),
+      });
 
-      if (insertError) {
-        console.error("Error inserting report:", insertError);
-        alert(t.saveError + insertError.message);
+      if (res.status === 401) {
+        alert(t.loginFirst);
         setSaving(false);
         return;
       }
 
-      // Create notification for admins — non-blocking, errors are swallowed
-      if (reportData) {
-        try {
-          const { data: admins } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("role", "admin");
-
-          if (admins && admins.length > 0) {
-            const adminNotifs = admins.map((admin: any) => ({
-              user_id: admin.id,
-              title: t.newReportTitle,
-              content: t.newReportContent(
-                selectedSubcategory,
-                contact.trim(),
-                description.trim()
-              ),
-              report_id: reportData.id,
-              read: false,
-            }));
-            await supabase.from("notifications").insert(adminNotifs);
-          }
-        } catch (err) {
-          // Notification failure should not block the report submission
-          console.error("Failed to insert admin notifications:", err);
-        }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("Error inserting report:", body.error || res.statusText);
+        alert(t.saveError + (body.error || res.statusText));
+        setSaving(false);
+        return;
       }
 
       setShowSuccessModal(true);
@@ -519,9 +489,18 @@ function ReportIssueForm() {
               <button
                 onClick={() => {
                   setShowSuccessModal(false);
-                  router.push("/reportissue/historys");
+                  router.push("/Dashboard");
                 }}
                 className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-sm py-3.5 rounded-xl transition duration-200 cursor-pointer"
+              >
+                {language === "th" ? "กลับหน้า Dashboard" : "Back to Dashboard"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push("/reportissue/historys");
+                }}
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-sm py-3.5 rounded-xl transition duration-200 cursor-pointer"
               >
                 {t.viewHistoryBtn}
               </button>

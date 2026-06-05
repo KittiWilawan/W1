@@ -25,6 +25,88 @@ export async function GET() {
   return Response.json(data || []);
 }
 
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const {
+      category_id,
+      category_title,
+      category_color,
+      subcategory,
+      description,
+      contact,
+      image,
+    } = body;
+
+    if (!category_id || !subcategory || !String(description || "").trim()) {
+      return Response.json(
+        { error: "category_id, subcategory, and description are required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: reportData, error: insertError } = await supabase
+      .from("reports")
+      .insert({
+        user_id: user.id,
+        category_id,
+        category_title: category_title || "หมวดหมู่อื่นๆ",
+        category_color: category_color || "#64748B",
+        subcategory,
+        description: String(description).trim(),
+        contact: String(contact || "").trim(),
+        image: image || null,
+        status: "รอดำเนินการ",
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      return Response.json({ error: insertError.message }, { status: 500 });
+    }
+
+    try {
+      const { data: admins } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin");
+
+      if (admins && admins.length > 0 && reportData) {
+        const title = body.notification_title || "มีรายการแจ้งเหตุใหม่ 📢";
+        const content =
+          body.notification_content ||
+          `หัวข้อ: ${subcategory}\nผู้แจ้ง: ${String(contact || "").trim() || "ไม่ระบุชื่อ"}\nรายละเอียด: ${String(description).trim().slice(0, 60)}...`;
+
+        const adminNotifs = admins.map((admin) => ({
+          user_id: admin.id,
+          title,
+          content,
+          report_id: reportData.id,
+          read: false,
+        }));
+
+        await supabase.from("notifications").insert(adminNotifs);
+      }
+    } catch {
+      // Notification failure should not block report submission
+    }
+
+    return Response.json(reportData, { status: 201 });
+  } catch {
+    return Response.json({ error: "Invalid request body" }, { status: 400 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
 

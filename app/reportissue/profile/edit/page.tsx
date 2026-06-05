@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Phone, Mail, Loader2, Save, CheckCircle, Camera, X, MapPin, FileText, Type } from "lucide-react";
-import { createClient } from "@/app/lib/supabase";
+import { ArrowLeft, Phone, Mail, Loader2, Save, CheckCircle, Camera, X, MapPin, FileText, Type } from "lucide-react";
 import { useSettings } from "@/app/components/SettingsProvider";
 
 export default function EditProfilePage() {
@@ -27,41 +26,45 @@ export default function EditProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const supabase = createClient();
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          router.push("/reportissue/profile");
+        const res = await fetch("/api/profile");
+
+        if (res.status === 401) {
+          router.push("/");
           return;
         }
 
-        setEmail(user.email || "");
-
-        // Fetch user profile from database table
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-
-        if (!profileError && profileData) {
-          setPhone(profileData.phone || "");
-          setDisplayName(profileData.display_name || "");
-          setAvatarUrl(profileData.avatar_url || "");
-          setAvatarPreview(profileData.avatar_url || "");
-          setAddress(profileData.address || "");
-          setBio(profileData.bio || "");
-        } else {
-          setPhone(user.user_metadata?.phone || "");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(
+            language === "th"
+              ? "ไม่สามารถโหลดโปรไฟล์ได้: " + (body.error || res.statusText)
+              : "Failed to load profile: " + (body.error || res.statusText)
+          );
+          return;
         }
+
+        const profileData = await res.json();
+        setEmail(profileData.email || "");
+        setPhone(profileData.phone || "");
+        setDisplayName(profileData.display_name || "");
+        setAvatarUrl(profileData.avatar_url || "");
+        setAvatarPreview(profileData.avatar_url || "");
+        setAddress(profileData.address || "");
+        setBio(profileData.bio || "");
       } catch (err) {
         console.error("Error loading profile details:", err);
+        setError(
+          language === "th"
+            ? "เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์"
+            : "An error occurred while loading profile"
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [router]);
+  }, [router, language]);
 
   const t = {
     avatarSizeError: language === "th" ? "ไฟล์รูปภาพต้องมีขนาดไม่เกิน 2MB" : "Image file size must not exceed 2MB",
@@ -144,37 +147,30 @@ export default function EditProfilePage() {
     setSaving(true);
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setError(t.loginAgainError);
-        setSaving(false);
-        return;
-      }
-
-      // Update profile in public.profiles
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           phone: phoneClean,
           display_name: displayName || null,
           avatar_url: avatarUrl || null,
           address: address || null,
           bio: bio || null,
-        })
-        .eq("id", user.id);
+        }),
+      });
 
-      if (updateError) {
-        setError(t.updateProfileError + updateError.message);
+      if (res.status === 401) {
+        setError(t.loginAgainError);
         setSaving(false);
         return;
       }
 
-      // Also update user metadata for consistency
-      await supabase.auth.updateUser({
-        data: { phone: phoneClean }
-      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(t.updateProfileError + (body.error || res.statusText));
+        setSaving(false);
+        return;
+      }
 
       setSuccess(true);
       setTimeout(() => {
