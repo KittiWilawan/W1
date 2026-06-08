@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/app/lib/supabase-server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,9 +12,16 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const includeAvatar =
+    request.nextUrl.searchParams.get("includeAvatar") === "true";
+
+  const selectFields = includeAvatar
+    ? "*"
+    : "id, email, phone, role, created_at, display_name, address, bio, dark_mode, large_text, language";
+
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("*")
+    .select(selectFields)
     .eq("id", user.id)
     .single();
 
@@ -57,29 +64,33 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const profilePayload = {
+    const profilePayload: Record<string, unknown> = {
       id: user.id,
       email: user.email,
       phone: phoneClean || null,
       display_name: body.display_name || null,
-      avatar_url: body.avatar_url || null,
       address: body.address || null,
       bio: body.bio || null,
     };
 
+    if ("avatar_url" in body) {
+      profilePayload.avatar_url = body.avatar_url || null;
+    }
+
     const { data, error: updateError } = await supabase
       .from("profiles")
       .upsert(profilePayload, { onConflict: "id" })
-      .select()
+      .select("id, email, phone, role, created_at, display_name, address, bio, dark_mode, large_text, language")
       .single();
 
     if (updateError) {
       return Response.json({ error: updateError.message }, { status: 500 });
     }
 
-    await supabase.auth.updateUser({
-      data: { phone: phoneClean },
-    });
+    const currentPhone = String(user.user_metadata?.phone || "").replace(/[^0-9]/g, "");
+    if (phoneClean !== currentPhone) {
+      void supabase.auth.updateUser({ data: { phone: phoneClean } });
+    }
 
     return Response.json(data);
   } catch {

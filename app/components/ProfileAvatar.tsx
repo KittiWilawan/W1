@@ -23,7 +23,7 @@ export default function ProfileAvatar({
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const res = await fetch("/api/profile");
+        const res = await fetch("/api/profile?includeAvatar=true");
         if (res.ok) {
           setProfile(await res.json());
         }

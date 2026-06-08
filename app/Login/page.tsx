@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { SiLine, SiGoogle } from "react-icons/si";
 import { createClient } from "@/app/lib/supabase";
+import { redirectAfterAuth, signInWithEmail } from "@/app/lib/auth-session";
 
 const LoginCard = () => {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -19,21 +18,8 @@ const LoginCard = () => {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      // Successful sign in, redirect to Dashboard
-      router.push("/Dashboard");
-      router.refresh();
+      const { role } = await signInWithEmail(email, password);
+      redirectAfterAuth(role);
     } catch (err: any) {
       setError(err.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
       setLoading(false);

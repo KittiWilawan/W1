@@ -7,6 +7,7 @@ import { Bell, ChevronRight, Loader2 } from "lucide-react";
 import {
   AppNotification,
   extractStatusFromNotification,
+  getNotificationListPath,
   getNotificationTarget,
   getStatusBadgeClass,
   isNewReportNotification,
@@ -93,7 +94,7 @@ export default function NotificationBell({
     if (target) {
       router.push(target);
     } else {
-      router.push("/Dashboard/notification");
+      router.push(getNotificationListPath(userRole));
     }
   };
 
@@ -139,7 +140,7 @@ export default function NotificationBell({
               )}
             </h3>
             <Link
-              href="/Dashboard/notification"
+              href={getNotificationListPath(userRole)}
               onClick={() => setOpen(false)}
               className="text-[10px] font-bold text-blue-600 hover:text-blue-800"
             >

@@ -4,11 +4,11 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, LayoutDashboard, Layers, Menu, X, User as UserIcon } from "lucide-react";
-import { createClient } from "@/app/lib/supabase";
 import { useSettings } from "@/app/components/SettingsProvider";
 import ProfileAvatar from "@/app/components/ProfileAvatar";
 import NotificationBell from "@/app/components/NotificationBell";
 import { signOutUser } from "@/app/lib/sign-out";
+import { normalizeRole } from "@/app/lib/roles";
 import { getLogoutButtonClass } from "@/app/lib/logout-button";
 
 export default function DashboardLayout({
@@ -33,14 +33,14 @@ export default function DashboardLayout({
                     setUser({ email: profileData.email, id: profileData.id });
                 }
             } catch {
-                const supabase = createClient();
-                const { data: { user: authUser } } = await supabase.auth.getUser();
-                setUser(authUser);
+                // ignore
             }
         };
 
         loadHeaderData();
     }, []);
+
+    const userRole = normalizeRole(profile?.role);
 
     const getLinkClass = (path: string) => {
         const baseClass = "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition duration-200 ";
@@ -62,8 +62,6 @@ export default function DashboardLayout({
             alert(language === "th" ? "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง" : "Could not sign out. Please try again.");
         }
     };
-
-    const userRole = profile?.role || "admin";
 
     const tNav = {
         report: language === 'th' ? 'แจ้งปัญหา' : 'Report an Issue',
@@ -125,9 +123,8 @@ export default function DashboardLayout({
 
             {/* Mobile Sidebar Content */}
             <aside
-                className={`fixed inset-y-0 left-0 w-64 border-r flex flex-col pt-6 z-40 transition-all duration-300 md:hidden ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-[#EEF2F6] border-slate-200'} ${
-                    sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                }`}
+                className={`fixed inset-y-0 left-0 w-64 border-r flex flex-col pt-6 z-40 transition-all duration-300 md:hidden ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-[#EEF2F6] border-slate-200'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
                 style={{ visibility: sidebarOpen ? 'visible' : 'hidden' }}
             >
                 <div className="px-6 mb-6 flex items-center justify-between">
@@ -249,7 +246,7 @@ export default function DashboardLayout({
                         <button
                             type="button"
                             onClick={handleSignOut}
-                            className={`${getLogoutButtonClass(darkMode)} p-1.5`}
+                            className={`p-1.5 rounded-lg transition cursor-pointer ${darkMode ? "text-red-400 hover:text-red-300 hover:bg-red-950/40" : "text-red-500 hover:text-red-700 hover:bg-red-50"}`}
                             title={tNav.logout}
                         >
                             <LogOut className="w-5 h-5" />

@@ -14,6 +14,8 @@ export default function EditProfilePage() {
   const [phone, setPhone] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [initialAvatarUrl, setInitialAvatarUrl] = useState("");
+  const [avatarChanged, setAvatarChanged] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [address, setAddress] = useState("");
   const [bio, setBio] = useState("");
@@ -26,7 +28,7 @@ export default function EditProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch("/api/profile");
+        const res = await fetch("/api/profile?includeAvatar=true");
 
         if (res.status === 401) {
           router.push("/");
@@ -47,7 +49,9 @@ export default function EditProfilePage() {
         setEmail(profileData.email || "");
         setPhone(profileData.phone || "");
         setDisplayName(profileData.display_name || "");
-        setAvatarUrl(profileData.avatar_url || "");
+        const loadedAvatar = profileData.avatar_url || "";
+        setAvatarUrl(loadedAvatar);
+        setInitialAvatarUrl(loadedAvatar);
         setAvatarPreview(profileData.avatar_url || "");
         setAddress(profileData.address || "");
         setBio(profileData.bio || "");
@@ -120,6 +124,7 @@ export default function EditProfilePage() {
       const base64 = reader.result as string;
       setAvatarPreview(base64);
       setAvatarUrl(base64);
+      setAvatarChanged(true);
     };
     reader.readAsDataURL(file);
   };
@@ -127,6 +132,7 @@ export default function EditProfilePage() {
   const handleRemoveAvatar = () => {
     setAvatarUrl("");
     setAvatarPreview("");
+    setAvatarChanged(initialAvatarUrl !== "");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -147,16 +153,21 @@ export default function EditProfilePage() {
     setSaving(true);
 
     try {
+      const payload: Record<string, string | null> = {
+        phone: phoneClean,
+        display_name: displayName || null,
+        address: address || null,
+        bio: bio || null,
+      };
+
+      if (avatarChanged) {
+        payload.avatar_url = avatarUrl || null;
+      }
+
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: phoneClean,
-          display_name: displayName || null,
-          avatar_url: avatarUrl || null,
-          address: address || null,
-          bio: bio || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.status === 401) {
@@ -175,7 +186,7 @@ export default function EditProfilePage() {
       setSuccess(true);
       setTimeout(() => {
         router.push("/reportissue/profile");
-      }, 1500);
+      }, 500);
     } catch (err: any) {
       setError(err.message || t.generalUpdateError);
     } finally {

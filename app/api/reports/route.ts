@@ -111,10 +111,16 @@ export async function POST(request: NextRequest) {
           read: false,
         }));
 
-        await supabase.from("notifications").insert(adminNotifs);
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert(adminNotifs);
+
+        if (notifError) {
+          console.error("Failed to insert admin notifications:", notifError.message);
+        }
       }
-    } catch {
-      // Notification failure should not block report submission
+    } catch (notifErr) {
+      console.error("Notification fan-out failed:", notifErr);
     }
 
     return Response.json(reportData, { status: 201 });

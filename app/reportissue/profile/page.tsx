@@ -35,7 +35,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch("/api/profile");
+        const res = await fetch("/api/profile?includeAvatar=true");
 
         if (res.status === 401) {
           router.push("/");

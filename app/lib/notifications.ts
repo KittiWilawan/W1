@@ -27,19 +27,17 @@ export function extractStatusFromNotification(notif: AppNotification): string | 
   return match?.[1] || null;
 }
 
+export function getNotificationListPath(userRole: "admin" | "member" | string) {
+  return userRole === "admin"
+    ? "/admindashboard/notification"
+    : "/Dashboard/notification";
+}
+
 export function getNotificationTarget(
   notif: AppNotification,
   userRole: "admin" | "member" | string
 ): string | null {
   if (!notif.report_id) return null;
-
-  if (userRole === "admin" && isNewReportNotification(notif)) {
-    return `/admindashboard?report=${notif.report_id}`;
-  }
-
-  if (isStatusUpdateNotification(notif) || userRole !== "admin") {
-    return `/reportissue/historys?report=${notif.report_id}`;
-  }
 
   if (userRole === "admin") {
     return `/admindashboard?report=${notif.report_id}`;

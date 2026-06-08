@@ -10,7 +10,9 @@ const App = async () => {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/Dashboard");
+    const rawRole = user.user_metadata?.role || "member";
+    const role = rawRole === "normaluser" ? "member" : rawRole;
+    redirect(role === "admin" ? "/admindashboard" : "/Dashboard");
   }
 
   return (

@@ -82,14 +82,47 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return Response.json({ error: updateError.message }, { status: 500 });
     }
 
+    const reportLabel = report.subcategory || report.category_title || "รายการแจ้งเหตุ";
+
     if (report?.user_id) {
-      await supabase.from("notifications").insert({
+      const { error: ownerNotifError } = await supabase.from("notifications").insert({
         user_id: report.user_id,
         title: "อัปเดตสถานะแจ้งเหตุ",
-        content: `รายการ "${report.subcategory || report.category_title}" ถูกเปลี่ยนสถานะเป็น "${status}"`,
+        content: `รายการ "${reportLabel}" ถูกเปลี่ยนสถานะเป็น "${status}"`,
         report_id: id,
         read: false,
       });
+
+      if (ownerNotifError) {
+        console.error("Failed to insert owner notification:", ownerNotifError.message);
+      }
+    }
+
+    try {
+      const { data: admins } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin");
+
+      if (admins && admins.length > 0) {
+        const adminNotifs = admins.map((admin) => ({
+          user_id: admin.id,
+          title: "🔄 อัปเดตสถานะรายการแจ้งเหตุ",
+          content: `รายการ "${reportLabel}" ถูกเปลี่ยนสถานะเป็น "${status}"\nจาก: ${report.contact || "ไม่ระบุชื่อ"}`,
+          report_id: id,
+          read: false,
+        }));
+
+        const { error: adminNotifError } = await supabase
+          .from("notifications")
+          .insert(adminNotifs);
+
+        if (adminNotifError) {
+          console.error("Failed to insert admin notifications:", adminNotifError.message);
+        }
+      }
+    } catch (notifErr) {
+      console.error("Admin notification fan-out failed:", notifErr);
     }
 
     return Response.json(report);

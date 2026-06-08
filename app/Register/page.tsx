@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/app/lib/supabase";
+import { redirectAfterAuth, signInWithEmail } from "@/app/lib/auth-session";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -13,12 +14,10 @@ const Register = () => {
   const [role, setRole] = useState("member");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
     if (password !== confirmPassword) {
       setError("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
@@ -29,7 +28,7 @@ const Register = () => {
 
     try {
       const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -37,7 +36,6 @@ const Register = () => {
             phone: phone,
             role: role,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -47,13 +45,8 @@ const Register = () => {
         return;
       }
 
-      setSuccess("สมัครสมาชิกสำเร็จ! โปรดตรวจสอบอีเมลของคุณเพื่อยืนยันบัญชี");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setPhone("");
-      setRole("member");
-      setLoading(false);
+      const { role: signedInRole } = await signInWithEmail(email, password);
+      redirectAfterAuth(signedInRole || role);
     } catch (err: any) {
       setError(err.message || "เกิดข้อผิดพลาดในการสมัครสมาชิก");
       setLoading(false);
@@ -80,12 +73,6 @@ const Register = () => {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm text-center">
             {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm text-center">
-            {success}
           </div>
         )}
 
