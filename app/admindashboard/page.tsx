@@ -1,9 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSettings } from "@/app/components/SettingsProvider";
+import type { MapReportPin } from "@/app/components/IncidentStatusMap";
+import { IncidentStatusMapLoading } from "@/app/components/IncidentStatusMap";
 import {
+  MapPin,
   Loader2,
   Image as ImageIcon,
   Calendar,
@@ -33,6 +37,48 @@ export default function DashboardPage() {
   const [completionImage, setCompletionImage] = useState<string | null>(null);
   const [savingCompletion, setSavingCompletion] = useState(false);
   const completionFileRef = useRef<HTMLInputElement>(null);
+
+  interface MapReportPin {
+    id: string;
+    latitude: number;
+    longitude: number;
+    location_address: string | null;
+    status: string;
+    subcategory: string;
+    category_title: string;
+    category_color: string;
+    description: string;
+    created_at: string;
+  }
+  const IncidentStatusMap = dynamic(
+    () => import("@/app/components/IncidentStatusMap"),
+    {
+      ssr: false,
+      loading: () => <IncidentStatusMapLoading heightClass="h-72" />,
+    }
+  );
+  const mapReports: MapReportPin[] = useMemo(
+    () =>
+      reports
+        .filter(
+          (r) =>
+            typeof r.latitude === "number" &&
+            typeof r.longitude === "number"
+        )
+        .map((r) => ({
+          id: r.id,
+          latitude: r.latitude as number,
+          longitude: r.longitude as number,
+          location_address: r.locationAddress,
+          status: r.status,
+          subcategory: r.subcategory,
+          category_title: r.categoryTitle,
+          category_color: r.categoryColor,
+          description: r.description,
+          created_at: r.createdAt,
+        })),
+    [reports]
+  );
 
   // โหลดข้อมูล Categories ไว้เฉพาะสำหรับใช้ในตัวกรองปุ่มด้านล่างเท่านั้น (ตัด UI การแสดงผลการ์ดออก)
   const fetchCategories = useCallback(async () => {
@@ -263,6 +309,25 @@ export default function DashboardPage() {
     searchPlaceholder: language === "th" ? "ค้นหารายการแจ้งเหตุ..." : "Search reports...",
     filterCategory: language === "th" ? "หมวดหมู่:" : "Category:",
     filterAll: language === "th" ? "ทั้งหมด (All)" : "All",
+    mapTitle:
+
+      language === "th" ? "แผนที่ตำแหน่งที่แจ้งเหตุ" : "Reported Locations Map",
+
+    mapDesc:
+
+      language === "th"
+
+        ? "จุดปักหมุดจากการแจ้งเหตุของคุณ กรองตามสถานะได้"
+
+        : "Pins from your reports, filterable by status",
+
+    issueLocation:
+
+      language === "th" ? "ตำแหน่งที่เกิดปัญหา" : "Issue location",
+
+    noLocation:
+
+      language === "th" ? "ไม่มีข้อมูลตำแหน่ง" : "No location data",
   };
 
   return (
@@ -276,8 +341,26 @@ export default function DashboardPage() {
           </div>
         </div>
 
+
+        {mapReports.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* หัวข้อแผงควบคุมแผนที่ */}
+            <div className="p-5 border-b border-slate-100">
+              <h2 className="text-base font-bold text-[#0F172A]">{t.mapTitle}</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{t.mapDesc}</p>
+            </div>
+
+            {/* ตัว Component แผนที่ตัวจริงที่รับค่าพิกัดไปวาดลงแผนที่ */}
+            <IncidentStatusMap
+              reports={mapReports}
+              language={language}
+              heightClass="h-72"
+            />
+          </div>
+        )}
         {/* Dashboard Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
           {/* Left Column: Real-time Status Counter */}
           <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div className="p-5 flex items-center justify-between border-b border-slate-100">
@@ -365,8 +448,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
+
           {/* Right Column: Reports Table and Filters */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between">
+
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-4">
                 <h3 className="text-lg font-bold text-[#0F172A]">
