@@ -303,12 +303,12 @@ export default function HistoryContent() {
         prev.map((r) =>
           r.id === editingReport.id
             ? {
-                ...r,
-                description: updated.description,
-                contact: updated.contact,
-                image: updated.image || null,
-                status: updated.status,
-              }
+              ...r,
+              description: updated.description,
+              contact: updated.contact,
+              image: updated.image || null,
+              status: updated.status,
+            }
             : r
         )
       );
@@ -413,19 +413,20 @@ export default function HistoryContent() {
             )}
           </div>
 
-          <Link
-            href="/Dashboard"
-            className="text-black text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5 cursor-pointer bg-white border border-slate-200"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>{t.backBtn}</span>
-          </Link>
 
           <Link
             href="/reportissue"
             className="bg-[#3B82F6] hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5 cursor-pointer"
           >
+            <ChevronLeft className="w-3.5 h-3.5" />
             <span>{t.reportNewBtn}</span>
+          </Link>
+
+          <Link
+            href="/Dashboard"
+            className="text-black text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center space-x-1.5 cursor-pointer bg-white border border-slate-200"
+          >
+            <span>{t.backBtn}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -451,11 +452,10 @@ export default function HistoryContent() {
             <div
               key={report.id}
               id={`report-${report.id}`}
-              className={`bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col md:flex-row ${
-                highlightedReportId === report.id
-                  ? "border-blue-400 ring-2 ring-blue-200 shadow-md"
-                  : "border-slate-200"
-              }`}
+              className={`bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col md:flex-row ${highlightedReportId === report.id
+                ? "border-blue-400 ring-2 ring-blue-200 shadow-md"
+                : "border-slate-200"
+                }`}
             >
               {report.image ? (
                 <div className="w-full md:w-48 h-48 md:h-auto relative shrink-0">
