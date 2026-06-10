@@ -329,6 +329,17 @@ export default function HistoryContent() {
 
     setSaving(true);
     try {
+      // Prevent "save" from hanging forever
+      const controller = new AbortController();
+      const timeoutMs = 20000;
+      const timeoutId = window.setTimeout(() => {
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
+      }, timeoutMs);
+
       const res = await fetch(`/api/reports/${editingReport.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -337,7 +348,10 @@ export default function HistoryContent() {
           contact: editContact.trim(),
           image: editImage,
         }),
+        signal: controller.signal,
       });
+
+      window.clearTimeout(timeoutId);
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -361,6 +375,14 @@ export default function HistoryContent() {
       );
       closeEditModal();
     } catch (err) {
+      if ((err as any)?.name === "AbortError") {
+        alert(
+          language === "th"
+            ? "การบันทึกใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง"
+            : "Save request timed out. Please try again."
+        );
+        return;
+      }
       alert(
         language === "th"
           ? "เกิดข้อผิดพลาดในการบันทึก"
@@ -619,12 +641,14 @@ export default function HistoryContent() {
                         <AlertCircle className="w-4 h-4 shrink-0" />
                         {t.infoRequestedBanner}
                       </p>
-                      <button
-                        onClick={() => openEditModal(report)}
-                        className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
-                      >
-                        {t.editAndSubmit}
-                      </button>
+                      {(userRole !== "admin" || viewMode === "user") && (
+                        <button
+                          onClick={() => openEditModal(report)}
+                          className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
+                        >
+                          {t.editAndSubmit}
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -710,7 +734,7 @@ export default function HistoryContent() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {report.status !== "เสร็จสิ้น" && (
+                    {report.status !== "เสร็จสิ้น" && (userRole !== "admin" || viewMode === "user") && (
                       <button
                         onClick={() => openEditModal(report)}
                         className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition active:scale-95 cursor-pointer"

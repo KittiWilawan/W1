@@ -113,7 +113,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       existingReport.subcategory || existingReport.category_title || "รายการแจ้งเหตุ";
     const nowIso = new Date().toISOString();
 
-    if (isAdmin) {
+    // Admin status update: only when the request is explicitly sending "status".
+    // This allows an admin who is also the report owner to edit description/contact
+    // via the owner-update path (without being forced to send status).
+    if (isAdmin && "status" in body) {
       const { status, completion_image, rejection_reason } = body;
 
       if (!status) {
