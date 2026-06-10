@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 icon={
                   IconComponent ? (
                     <IconComponent
-                      className="w-16 h-16"
+                      className="w-8 h-8"
                       style={{ color: cat.color }}
                     />
                   ) : null

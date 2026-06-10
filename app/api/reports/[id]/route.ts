@@ -111,9 +111,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const body = await request.json();
     const reportLabel =
       existingReport.subcategory || existingReport.category_title || "รายการแจ้งเหตุ";
+    const nowIso = new Date().toISOString();
 
     if (isAdmin) {
-      const { status, completion_image } = body;
+      const { status, completion_image, rejection_reason } = body;
 
       if (!status) {
         return Response.json({ error: "status is required" }, { status: 400 });
@@ -126,27 +127,81 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         );
       }
 
+      if (status === "ปฎิเสธ" && !String(rejection_reason || "").trim()) {
+        return Response.json(
+          { error: "rejection_reason is required when rejecting a report" },
+          { status: 400 }
+        );
+      }
+
       const updatePayload: Record<string, unknown> = { status };
       if (status === "เสร็จสิ้น") {
         updatePayload.completion_image = completion_image;
       }
+      if (status === "ปฎิเสธ") {
+        updatePayload.rejection_reason = String(rejection_reason || "").trim();
+        updatePayload.rejected_at = nowIso;
+      }
+      // Track working time milestones (optional columns)
+      if (status === "กำลังดำเนินการ" && !existingReport.in_progress_at) {
+        updatePayload.in_progress_at = nowIso;
+      }
+      if (status === "เสร็จสิ้น" && !existingReport.completed_at) {
+        updatePayload.completed_at = nowIso;
+      }
 
-      const { data: report, error: updateError } = await supabase
-        .from("reports")
-        .update(updatePayload)
-        .eq("id", id)
-        .select("*")
-        .single();
+      let report: any = null;
+      let updateError: any = null;
+
+      // Some environments may not have the new timestamp columns yet.
+      // If the update fails due to missing columns, retry without them.
+      {
+        const res = await supabase
+          .from("reports")
+          .update(updatePayload)
+          .eq("id", id)
+          .select("*")
+          .single();
+        report = res.data;
+        updateError = res.error;
+      }
+
+      if (
+        updateError &&
+        typeof updateError.message === "string" &&
+        updateError.message.includes("does not exist")
+      ) {
+        const retryPayload = { ...updatePayload } as Record<string, unknown>;
+        delete retryPayload.in_progress_at;
+        delete retryPayload.completed_at;
+        delete retryPayload.rejected_at;
+        delete retryPayload.rejection_reason;
+        const retryRes = await supabase
+          .from("reports")
+          .update(retryPayload)
+          .eq("id", id)
+          .select("*")
+          .single();
+        report = retryRes.data;
+        updateError = retryRes.error;
+      }
 
       if (updateError) {
         return Response.json({ error: updateError.message }, { status: 500 });
       }
 
       if (report?.user_id) {
+        const title =
+          status === "ปฎิเสธ" ? "รายการแจ้งเหตุถูกปฎิเสธ" : "อัปเดตสถานะแจ้งเหตุ";
+        const content =
+          status === "ปฎิเสธ"
+            ? `รายการ "${reportLabel}" ถูกปฎิเสธ\nเหตุผล: ${String(rejection_reason || "").trim()}`
+            : `รายการ "${reportLabel}" ถูกเปลี่ยนสถานะเป็น "${status}"`;
+
         const { error: ownerNotifError } = await supabase.from("notifications").insert({
           user_id: report.user_id,
-          title: "อัปเดตสถานะแจ้งเหตุ",
-          content: `รายการ "${reportLabel}" ถูกเปลี่ยนสถานะเป็น "${status}"`,
+          title,
+          content,
           report_id: id,
           read: false,
         });
@@ -160,7 +215,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         supabase,
         id,
         "🔄 อัปเดตสถานะรายการแจ้งเหตุ",
-        `รายการ "${reportLabel}" ถูกเปลี่ยนสถานะเป็น "${status}"\nจาก: ${existingReport.contact || "ไม่ระบุชื่อ"}`
+        status === "ปฎิเสธ"
+          ? `รายการ "${reportLabel}" ถูกปฎิเสธ\nจาก: ${existingReport.contact || "ไม่ระบุชื่อ"}\nเหตุผล: ${String(rejection_reason || "").trim()}`
+          : `รายการ "${reportLabel}" ถูกเปลี่ยนสถานะเป็น "${status}"\nจาก: ${existingReport.contact || "ไม่ระบุชื่อ"}`
       );
 
       return Response.json(report);
@@ -194,14 +251,41 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const wasInfoRequested = existingReport.status === "ขอข้อมูลเพิ่ม";
     if (wasInfoRequested) {
       updatePayload.status = "กำลังดำเนินการ";
+      if (!existingReport.in_progress_at) {
+        updatePayload.in_progress_at = nowIso;
+      }
     }
 
-    const { data: report, error: updateError } = await supabase
-      .from("reports")
-      .update(updatePayload)
-      .eq("id", id)
-      .select("*")
-      .single();
+    let report: any = null;
+    let updateError: any = null;
+    {
+      const res = await supabase
+        .from("reports")
+        .update(updatePayload)
+        .eq("id", id)
+        .select("*")
+        .single();
+      report = res.data;
+      updateError = res.error;
+    }
+
+    if (
+      updateError &&
+      typeof updateError.message === "string" &&
+      updateError.message.includes("does not exist")
+    ) {
+      const retryPayload = { ...updatePayload } as Record<string, unknown>;
+      delete retryPayload.in_progress_at;
+      delete retryPayload.completed_at;
+      const retryRes = await supabase
+        .from("reports")
+        .update(retryPayload)
+        .eq("id", id)
+        .select("*")
+        .single();
+      report = retryRes.data;
+      updateError = retryRes.error;
+    }
 
     if (updateError) {
       return Response.json({ error: updateError.message }, { status: 500 });

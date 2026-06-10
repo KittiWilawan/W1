@@ -286,7 +286,12 @@ export default function DashboardPage() {
   };
 
   const handleDeleteReport = async (reportId: string) => {
-    if (confirm("คุณต้องการลบรายงานปัญหานี้ออกจากระบบใช่หรือไม่?")) {
+    const confirmMsg =
+      language === "th"
+        ? "คุณต้องการลบรายงานปัญหานี้ออกจากระบบใช่หรือไม่?\n\nหมายเหตุ: การลบเป็นการลบถาวร และไม่สามารถกู้คืนได้"
+        : "Are you sure you want to delete this report?\n\nNote: This action is permanent and cannot be undone.";
+
+    if (confirm(confirmMsg)) {
       try {
         const supabase = createClient();
         const { error } = await supabase
@@ -395,28 +400,6 @@ export default function DashboardPage() {
             <p className="text-slate-500 mt-1.5">
               {t.subtitle}
             </p>
-          </div>
-
-          {/* Mode Toggle */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('admin')}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${viewMode === 'admin'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                }`}
-            >
-              Admin View
-            </button>
-            <button
-              onClick={() => setViewMode('user')}
-              className={`px-4 py-2 rounded-lg font-semibold transition ${viewMode === 'user'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                }`}
-            >
-              User View
-            </button>
           </div>
         </div>
 
@@ -910,6 +893,51 @@ export default function DashboardPage() {
                       )}
                     </span>
                   </div>
+                  {(() => {
+                    const created = new Date(selectedReportForDetail.created_at);
+                    const inProgress = selectedReportForDetail.in_progress_at
+                      ? new Date(selectedReportForDetail.in_progress_at)
+                      : new Date(created.getTime() + 60 * 60 * 1000);
+                    const completed = selectedReportForDetail.completed_at
+                      ? new Date(selectedReportForDetail.completed_at)
+                      : new Date(created.getTime() + 6 * 60 * 60 * 1000);
+                    const locale = language === "th" ? "th-TH" : "en-US";
+                    const fmtTime = (d: Date) =>
+                      d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+
+                    return (
+                      <div className="pt-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                          {language === "th" ? "เวลาทำการ" : "Working timeline"}
+                        </p>
+                        <div className="mt-1 grid grid-cols-3 gap-2">
+                          <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">
+                              {language === "th" ? "รับเรื่อง" : "Received"}
+                            </p>
+                            <p className="text-xs font-semibold text-slate-700">{fmtTime(created)}</p>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">
+                              {language === "th" ? "กำลังดำเนินการ" : "In progress"}
+                            </p>
+                            <p className="text-xs font-semibold text-slate-700">{fmtTime(inProgress)}</p>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">
+                              {language === "th" ? "เสร็จสิ้น" : "Completed"}
+                            </p>
+                            <p className="text-xs font-semibold text-slate-700">{fmtTime(completed)}</p>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-[10px] text-slate-400">
+                          {language === "th"
+                            ? "* เวลาข้างต้นเป็นเวลาโดยประมาณ หากยังไม่มีการบันทึกเวลาในระบบ"
+                            : "* Times are approximate if the system hasn't recorded timestamps yet."}
+                        </p>
+                      </div>
+                    );
+                  })()}
                   {/* Location */}
                   {(selectedReportForDetail.location_address || (selectedReportForDetail.latitude && selectedReportForDetail.longitude)) && (
                     <div className="flex items-start gap-1.5">

@@ -49,6 +49,29 @@ const LoginCard = () => {
     }
   };
 
+  const handleLineLogin = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "line" as any,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+      }
+    } catch (err: any) {
+      setError(err.message || "เกิดข้อผิดพลาดในการเชื่อมต่อ LINE");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white p-10 rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md">
       <div className="text-center mb-8">
@@ -65,7 +88,7 @@ const LoginCard = () => {
 
       <div className="space-y-4 mb-8">
         <button
-          onClick={() => alert("เข้าสู่ระบบด้วย LINE ยังไม่เปิดให้บริการในขณะนี้")}
+          onClick={handleLineLogin}
           className="w-full flex items-center justify-center space-x-3 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2.5 rounded-lg transition duration-200 cursor-pointer"
           disabled={loading}
         >

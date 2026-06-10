@@ -95,7 +95,12 @@ create table if not exists public.reports (
   longitude double precision,
   location_address text,
   completion_image text, -- Admin evidence when marking as complete
-  status text default 'รอดำเนินการ' check (status in ('รอดำเนินการ', 'กำลังดำเนินการ', 'เสร็จสิ้น', 'ขอข้อมูลเพิ่ม')),
+  -- Optional working-time tracking fields (for timeline / SLA display)
+  in_progress_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  rejection_reason text,
+  rejected_at timestamp with time zone,
+  status text default 'รอดำเนินการ' check (status in ('รอดำเนินการ', 'กำลังดำเนินการ', 'เสร็จสิ้น', 'ขอข้อมูลเพิ่ม', 'ปฎิเสธ')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

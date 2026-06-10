@@ -1,16 +1,40 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/app/lib/supabase-server";
+import { normalizeRole } from "@/app/lib/roles";
+import { getAuthDestination } from "@/app/lib/auth-session";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/Dashboard";
+  const next = searchParams.get("next");
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // If caller explicitly passed a "next" param, respect it.
+      if (next) {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
+
+      // Otherwise, route by role (admin -> /admindashboard, others -> /Dashboard)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        const role = normalizeRole(profile?.role || user.user_metadata?.role);
+        const dest = getAuthDestination(role);
+        return NextResponse.redirect(`${origin}${dest}`);
+      }
+
+      return NextResponse.redirect(`${origin}/Dashboard`);
     }
   }
 

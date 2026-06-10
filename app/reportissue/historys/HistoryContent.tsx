@@ -81,14 +81,34 @@ export default function HistoryContent() {
 
   // View mode state
   const [viewMode, setViewMode] = useState<'admin' | 'user'>('user');
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "member">("member");
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchReports = async () => {
       try {
-        const res = await fetch("/api/reports");
+        // Load profile first (id + role) to support admin/user view switching.
+        const profileRes = await fetch("/api/profile");
+        if (profileRes.status === 401) {
+          router.replace("/");
+          return;
+        }
+
+        const profileBody = profileRes.ok ? await profileRes.json().catch(() => ({})) : {};
+        const role: "admin" | "member" =
+          profileBody?.role === "admin" ? "admin" : "member";
+
+        if (!cancelled) {
+          setUserRole(role);
+        }
+
+        const url =
+          role === "admin" && viewMode === "admin"
+            ? "/api/reports?all=true"
+            : "/api/reports";
+
+        const res = await fetch(url);
 
         if (res.status === 401) {
           router.replace("/");
@@ -153,23 +173,7 @@ export default function HistoryContent() {
     return () => {
       cancelled = true;
     };
-  }, [router, language]);
-
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const res = await fetch("/api/auth/user");
-        if (res.ok) {
-          const data = await res.json();
-          setCurrentUserId(data.id);
-        }
-      } catch (err) {
-        console.error("Failed to fetch current user:", err);
-      }
-    };
-
-    fetchCurrentUser();
-  }, []);
+  }, [router, language, viewMode]);
 
   useEffect(() => {
     const reportId = searchParams.get("report");
@@ -192,8 +196,8 @@ export default function HistoryContent() {
   const t = {
     confirmDelete:
       language === "th"
-        ? "คุณต้องการลบประวัติการแจ้งเหตุนี้ใช่หรือไม่?"
-        : "Are you sure you want to delete this report from history?",
+        ? "คุณต้องการลบประวัติการแจ้งเหตุนี้ใช่หรือไม่?\n\nหมายเหตุ: การลบเป็นการลบถาวร และไม่สามารถกู้คืนได้"
+        : "Are you sure you want to delete this report from history?\n\nNote: This action is permanent and cannot be undone.",
     deleteError:
       language === "th" ? "ไม่สามารถลบข้อมูลได้: " : "Failed to delete: ",
     deleteErrorCatch:
@@ -417,11 +421,6 @@ export default function HistoryContent() {
   }
 
   const filteredReports = reports.filter((report) => {
-    // View mode filter
-    if (viewMode === 'user' && currentUserId) {
-      if (report.latitude == null || report.longitude == null) return false;
-    }
-
     // Search query filter
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -450,26 +449,28 @@ export default function HistoryContent() {
 
         <div className="flex flex-wrap items-center gap-3">
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button
-              onClick={() => setViewMode('user')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'user'
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-                }`}
-            >
-              {t.userView}
-            </button>
-            <button
-              onClick={() => setViewMode('admin')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'admin'
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-                }`}
-            >
-              {t.adminView}
-            </button>
-          </div>
+          {userRole === "admin" && (
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('user')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+              >
+                {t.userView}
+              </button>
+              <button
+                onClick={() => setViewMode('admin')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'admin'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+              >
+                {t.adminView}
+              </button>
+            </div>
+          )}
 
           {/* Search Bar */}
           <div className="relative w-full sm:w-64">

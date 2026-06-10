@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, X, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, X, User as UserIcon } from "lucide-react";
 import { createClient } from "@/app/lib/supabase";
 import { useSettings } from "@/app/components/SettingsProvider";
 import ProfileAvatar from "@/app/components/ProfileAvatar";
@@ -36,6 +36,8 @@ export default function DashboardLayout({
         const supabase = createClient();
         const { data: { user: authUser } } = await supabase.auth.getUser();
         setUser(authUser);
+        // Fallback: allow admin controls to show even if /api/profile fails
+        setProfile({ role: authUser?.user_metadata?.role || "member" });
       }
     };
 
@@ -58,7 +60,9 @@ export default function DashboardLayout({
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const userRole = normalizeRole(profile?.role);
+  const actualRole = normalizeRole(profile?.role);
+  const userRole = actualRole;
+  const isAdmin = actualRole === "admin";
 
   const tNav = {
     report: language === 'th' ? 'แจ้งปัญหา' : 'Report an Issue',
@@ -137,27 +141,24 @@ export default function DashboardLayout({
             <Link
               href="/reportissue"
               onClick={() => setMobileMenuOpen(false)}
-              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition ${
-                pathname === '/reportissue' ? 'bg-blue-50 text-[#3B82F6]' : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition ${pathname === '/reportissue' ? 'bg-blue-50 text-[#3B82F6]' : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
+                }`}
             >
               {tNav.report}
             </Link>
             <Link
               href="/reportissue/historys"
               onClick={() => setMobileMenuOpen(false)}
-              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition ${
-                pathname === '/reportissue/historys' ? 'bg-blue-50 text-[#3B82F6]' : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition ${pathname === '/reportissue/historys' ? 'bg-blue-50 text-[#3B82F6]' : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
+                }`}
             >
               {tNav.history}
             </Link>
             <Link
               href="/reportissue/profile"
               onClick={() => setMobileMenuOpen(false)}
-              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center space-x-2 ${
-                pathname === '/reportissue/profile' ? 'bg-blue-50 text-[#3B82F6]' : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition flex items-center space-x-2 ${pathname === '/reportissue/profile' ? 'bg-blue-50 text-[#3B82F6]' : darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
+                }`}
             >
               <UserIcon className="w-4 h-4" />
               <span>{tNav.profile}</span>

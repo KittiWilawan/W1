@@ -10,6 +10,7 @@ import NotificationBell from "@/app/components/NotificationBell";
 import { signOutUser } from "@/app/lib/sign-out";
 import { normalizeRole } from "@/app/lib/roles";
 import { getLogoutButtonClass } from "@/app/lib/logout-button";
+import { createClient } from "@/app/lib/supabase";
 
 export default function DashboardLayout({
     children,
@@ -31,7 +32,18 @@ export default function DashboardLayout({
                     const profileData = await profileRes.json();
                     setProfile(profileData);
                     setUser({ email: profileData.email, id: profileData.id });
+                    return;
                 }
+            } catch {
+                // fallback below
+            }
+
+            // Fallback: still try to determine role from auth metadata
+            try {
+                const supabase = createClient();
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                setUser(authUser);
+                setProfile({ role: authUser?.user_metadata?.role || "member" });
             } catch {
                 // ignore
             }
@@ -41,6 +53,7 @@ export default function DashboardLayout({
     }, []);
 
     const userRole = normalizeRole(profile?.role);
+    const isAdmin = userRole === "admin";
 
     const getLinkClass = (path: string) => {
         const baseClass = "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition duration-200 ";
@@ -95,6 +108,11 @@ export default function DashboardLayout({
                     <Link href="/admindashboard/categories" className={getLinkClass('/admindashboard/categories')}>
                         <Layers className="w-5 h-5" />
                         <span>{tNav.categories}</span>
+                    </Link>
+
+                    <Link href="/admin-userview" className={getLinkClass('/admin-userview')}>
+                        <UserIcon className="w-5 h-5" />
+                        <span>{language === "th" ? "ดูมุมมองผู้ใช้" : "User View Preview"}</span>
                     </Link>
 
                     <div className={`px-3 mt-6 mb-2 text-[10px] font-bold uppercase tracking-wider pt-4 border-t ${darkMode ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-200'}`}>
@@ -162,6 +180,15 @@ export default function DashboardLayout({
                         <span>{tNav.categories}</span>
                     </Link>
 
+                    <Link
+                        href="/admin-userview"
+                        onClick={() => setSidebarOpen(false)}
+                        className={getLinkClass('/admin-userview')}
+                    >
+                        <UserIcon className="w-5 h-5" />
+                        <span>{language === "th" ? "ดูมุมมองผู้ใช้" : "User View Preview"}</span>
+                    </Link>
+
                     <div className={`px-3 mt-6 mb-2 text-[10px] font-bold uppercase tracking-wider pt-4 border-t ${darkMode ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-200'}`}>
                         {tNav.generalPages}
                     </div>
@@ -202,7 +229,7 @@ export default function DashboardLayout({
                         >
                             <Menu className="w-6 h-6" />
                         </button>
-                        <Link href="/Dashboard" className={`text-lg md:text-xl font-bold ${darkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                        <Link href="/admindashboard" className={`text-lg md:text-xl font-bold ${darkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                             Community Connect
                         </Link>
                     </div>
@@ -242,7 +269,7 @@ export default function DashboardLayout({
                     {/* Mobile Header Icons */}
                     <div className="flex lg:hidden items-center space-x-2">
                         <NotificationBell darkMode={darkMode} language={language} userRole={userRole} />
-                        <ProfileAvatar darkMode={darkMode} size="w-7 h-7" textSize="text-[10px]" />
+
                         <button
                             type="button"
                             onClick={handleSignOut}
