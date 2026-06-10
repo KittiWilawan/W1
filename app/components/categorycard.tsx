@@ -7,7 +7,6 @@ interface CardProps {
   color: string;
   subcategories?: string[];
   onClick: () => void;
-  // 1. เพิ่ม prop สำหรับรับค่าสถานะโหมดมืดเข้ามาทำงานในตัวการ์ด
   darkMode?: boolean;
 }
 
@@ -18,13 +17,13 @@ export default function CategoryCard({
   color,
   subcategories,
   onClick,
-  darkMode = false, // กำหนดค่าเริ่มต้นเป็น false หากไม่ได้ส่งมา
+  darkMode = false,
 }: CardProps) {
   return (
     <button
       onClick={onClick}
-      // 2. ใช้ Template Literals จัดการสลับสีพื้นหลังและสีข้อความหลักแบบเดียวกับใน Layout ของคุณ
-      className={`flex flex-col justify-between p-2.5 sm:p-3 w-full min-h-[115px] sm:min-h-[130px] rounded-2xl border-2 border-dashed text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md 
+      // ⚡ แก้ไขตรงนี้: ปลดล็อก max-w ออกเพื่อให้ยืดเต็มพื้นที่แต่ละช่อง Grid และชิดกันพอดี
+      className={`flex flex-col justify-between p-2.5 sm:p-3 w-full min-h-[120px] sm:min-h-[135px] rounded-2xl border-2 border-dashed text-left transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md 
         ${darkMode
           ? "bg-slate-800/80 text-slate-100 border-opacity-50"
           : "bg-white text-slate-800"
@@ -40,14 +39,14 @@ export default function CategoryCard({
           <div className="scale-75 sm:scale-90">{icon}</div>
         </div>
 
-        {/* 3. ส่วนหัวข้อ */}
+        {/* ส่วนหัวข้อ */}
         <h3 className={`text-xs sm:text-sm font-bold whitespace-pre-line mb-0.5 
           ${darkMode ? "text-white" : "text-slate-800"}`}
         >
           {title}
         </h3>
 
-        {/* 4. ส่วนคำอธิบาย */}
+        {/* ส่วนคำอธิบาย */}
         <p className={`text-[10px] sm:text-[11px] leading-snug line-clamp-1 
           ${darkMode ? "text-slate-400" : "text-slate-500"}`}
         >
@@ -62,7 +61,6 @@ export default function CategoryCard({
                 key={i}
                 className="text-[8px] sm:text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
                 style={{
-                  // ปรับสีพื้นหลังของป้ายให้สว่างขึ้นเล็กน้อยในโหมดมืดเพื่อให้ขับกับตัวอักษร
                   backgroundColor: color + (darkMode ? "28" : "15"),
                   color: color,
                 }}
