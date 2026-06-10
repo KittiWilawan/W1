@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSettings } from "@/app/components/SettingsProvider";
 import RejectModal from "@/app/components/RejectModal";
 import type { MapReportPin } from "@/app/components/IncidentStatusMap";
@@ -29,7 +29,6 @@ import { compressImage } from "@/app/lib/image-utils";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { language } = useSettings();
   const [categories, setCategories] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
@@ -94,49 +93,89 @@ export default function DashboardPage() {
   );
 
   const handleRejectReport = async (reportId: string, reason: string) => {
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("reports")
-        .update({
-          status: "ปฎิเสธ",
-          rejection_reason: reason,
-          rejected_at: new Date().toISOString(),
-        })
-        .eq("id", reportId);
+    if (!reportId) {
+      alert(language === "th" ? "ไม่พบรายการที่ต้องการปฎิเสธ" : "Missing report id");
+      setShowRejectModal(false);
+      setRejectingReportId(null);
+      return;
+    }
 
-      if (error) {
-        alert("ไม่สามารถปฎิเสธรายการได้: " + error.message);
+    try {
+      // Call server API to avoid client-side RLS issues and ensure response handling.
+      // Add a hard timeout so the UI never stays "loading" forever.
+      const controller = new AbortController();
+      const timeoutMs = 20000;
+      let timeoutId: number | undefined;
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          try {
+            controller.abort();
+          } catch {
+            // ignore
+          }
+          reject(new Error("timeout"));
+        }, timeoutMs);
+      });
+
+      const res = (await Promise.race([
+        fetch(`/api/reports/${reportId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "ปฎิเสธ",
+            rejection_reason: reason,
+          }),
+          signal: controller.signal,
+        }),
+        timeoutPromise,
+      ])) as Response;
+
+      if (timeoutId) window.clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(
+          (language === "th" ? "ไม่สามารถปฎิเสธรายการได้: " : "Failed to reject report: ") +
+            (body.error || res.statusText)
+        );
         return;
       }
 
-      const report = reports.find((r) => r.id === reportId);
-      if (report && report.user_id) {
-        await supabase.from("notifications").insert({
-          user_id: report.user_id,
-          title: "รายการแจ้งเหตุถูกปฎิเสธ",
-          content: `รายการ "${report.subcategory || report.category_title}" ถูกปฎิเสธ\nเหตุผล: ${reason}`,
-          report_id: reportId,
-          read: false,
-        });
+      const updated = await res.json().catch(() => null);
+      if (updated && updated.id) {
+        setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, ...updated } : r)));
+        if (selectedReportForDetail?.id === reportId) {
+          setSelectedReportForDetail((prev: any) => ({ ...(prev || {}), ...updated }));
+        }
+      } else {
+        // Fallback if server didn't return the updated row
+        setReports((prev) =>
+          prev.map((r) =>
+            r.id === reportId
+              ? {
+                  ...r,
+                  status: "ปฎิเสธ",
+                  rejection_reason: reason,
+                  rejected_at: new Date().toISOString(),
+                }
+              : r
+          )
+        );
       }
-
-      setReports((prev) =>
-        prev.map((r) =>
-          r.id === reportId
-            ? {
-              ...r,
-              status: "ปฎิเสธ",
-              rejection_reason: reason,
-              rejected_at: new Date().toISOString(),
-            }
-            : r
-        )
-      );
+    } catch (err: any) {
+      if (err?.name === "AbortError" || err?.message === "timeout") {
+        alert(
+          language === "th"
+            ? "การปฏิเสธใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง"
+            : "Reject request timed out. Please try again."
+        );
+      } else {
+        alert(language === "th" ? "เกิดข้อผิดพลาดในการปฎิเสธ" : "Error rejecting report");
+      }
+    } finally {
       setShowRejectModal(false);
       setRejectingReportId(null);
-    } catch (err: any) {
-      alert("เกิดข้อผิดพลาดในการปฎิเสธ");
     }
   };
 
@@ -191,14 +230,16 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const reportId = searchParams.get("report") || searchParams.get("reportId");
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const reportId = params.get("report") || params.get("reportId");
     if (!reportId || reports.length === 0) return;
 
     const report = reports.find((r) => r.id === reportId);
     if (report) {
       setSelectedReportForDetail(report);
     }
-  }, [searchParams, reports]);
+  }, [reports]);
 
   const handleUpdateStatus = async (
     reportId: string,

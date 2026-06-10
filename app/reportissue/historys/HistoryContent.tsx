@@ -52,6 +52,10 @@ interface Report {
   status: string;
   timestamp: string;
   createdAt: string;
+  inProgressAt?: string | null;
+  completedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
   latitude: number | null;
   longitude: number | null;
   locationAddress: string | null;
@@ -67,6 +71,7 @@ export default function HistoryContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [highlightedReportId, setHighlightedReportId] = useState<string | null>(null);
+  const [selectedReportForDetail, setSelectedReportForDetail] = useState<Report | null>(null);
 
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [editDescription, setEditDescription] = useState("");
@@ -143,6 +148,10 @@ export default function HistoryContent() {
           status: item.status,
           timestamp: new Date(item.created_at).toLocaleString("th-TH"),
           createdAt: item.created_at,
+          inProgressAt: item.in_progress_at || null,
+          completedAt: item.completed_at || null,
+          rejectedAt: item.rejected_at || null,
+          rejectionReason: item.rejection_reason || null,
           latitude:
             typeof item.latitude === "number" ? item.latitude : null,
           longitude:
@@ -733,6 +742,13 @@ export default function HistoryContent() {
                       </button>
                     )}
                     <button
+                      onClick={() => setSelectedReportForDetail(report)}
+                      className="p-1.5 text-slate-300 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition active:scale-95 cursor-pointer"
+                      title={language === "th" ? "ดูรายละเอียด" : "View details"}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDeleteReport(report.id)}
                       className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95 cursor-pointer"
                       title={t.deleteTooltip}
@@ -771,6 +787,174 @@ export default function HistoryContent() {
             >
               {t.emptyReportBtn}
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal (User-style, but shows the same timeline info as admin) */}
+      {selectedReportForDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_200ms_ease-out]"
+            onClick={() => setSelectedReportForDetail(null)}
+          />
+          <div className="relative bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-slate-100 z-10 my-auto animate-[scaleUp_250ms_ease-out] flex flex-col md:flex-row gap-6 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedReportForDetail(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-full md:w-1/2 flex flex-col space-y-4">
+              {selectedReportForDetail.image ? (
+                <img
+                  src={selectedReportForDetail.image}
+                  alt="Report detail preview"
+                  className="w-full h-64 object-cover rounded-2xl border border-slate-200 shadow-sm"
+                />
+              ) : (
+                <div className="w-full h-64 bg-slate-100 border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-300">
+                  <ImageIcon className="w-12 h-12 mb-2" />
+                </div>
+              )}
+
+              {/* Status indicator */}
+              <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex flex-col space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {language === "th" ? "สถานะการดำเนินงาน" : "Operational Status"}
+                </span>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${getStatusClass(selectedReportForDetail.status)}`}>
+                    {selectedReportForDetail.status}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    ID: {selectedReportForDetail.id.slice(0, 8)}...
+                  </span>
+                </div>
+              </div>
+
+              {selectedReportForDetail.status === "ปฎิเสธ" && selectedReportForDetail.rejectionReason && (
+                <div className="p-4 bg-red-50 border border-red-200/60 rounded-2xl">
+                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">
+                    {language === "th" ? "เหตุผลที่ถูกปฏิเสธ" : "Rejection reason"}
+                  </p>
+                  <p className="text-xs text-red-700 whitespace-pre-wrap mt-1">
+                    {selectedReportForDetail.rejectionReason}
+                  </p>
+                </div>
+              )}
+
+              {selectedReportForDetail.status === "เสร็จสิ้น" && selectedReportForDetail.completionImage && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {t.completionEvidence}
+                  </p>
+                  <img
+                    src={selectedReportForDetail.completionImage}
+                    alt="Completion evidence"
+                    className="w-full h-40 object-cover rounded-xl border border-emerald-200"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="w-full md:w-1/2 flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm"
+                    style={{ backgroundColor: selectedReportForDetail.categoryColor }}
+                  >
+                    {selectedReportForDetail.categoryTitle}
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-sm font-bold text-slate-700">{selectedReportForDetail.subcategory}</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {language === "th" ? "รายละเอียดปัญหา" : "Incident Details"}
+                  </h4>
+                  <p className="text-sm text-slate-800 break-words whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto pr-1">
+                    {selectedReportForDetail.description}
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-3 border-t border-slate-100 text-xs text-slate-600">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">{language === "th" ? "ผู้แจ้งเหตุ:" : "Reporter:"}</span>
+                    <span className="font-semibold">
+                      {selectedReportForDetail.contact || (language === "th" ? "ไม่ได้ระบุชื่อ" : "Anonymous")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">{language === "th" ? "วันที่แจ้ง:" : "Reported Date:"}</span>
+                    <span className="font-semibold">
+                      {new Date(selectedReportForDetail.createdAt).toLocaleString(language === "th" ? "th-TH" : "en-US")}
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const locale = language === "th" ? "th-TH" : "en-US";
+                    const fmtTimeOrDash = (value: unknown) => {
+                      if (!value) return "-";
+                      const d = new Date(String(value));
+                      if (Number.isNaN(d.getTime())) return "-";
+                      return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+                    };
+
+                    return (
+                      <div className="pt-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                          {language === "th" ? "เวลาทำการ" : "Working timeline"}
+                        </p>
+                        <div className="mt-1 grid grid-cols-3 gap-2">
+                          <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">{language === "th" ? "รับเรื่อง" : "Received"}</p>
+                            <p className="text-xs font-semibold text-slate-700">
+                              {fmtTimeOrDash(selectedReportForDetail.createdAt)}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">{language === "th" ? "กำลังดำเนินการ" : "In progress"}</p>
+                            <p className="text-xs font-semibold text-slate-700">
+                              {fmtTimeOrDash(selectedReportForDetail.inProgressAt)}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">{language === "th" ? "เสร็จสิ้น" : "Completed"}</p>
+                            <p className="text-xs font-semibold text-slate-700">
+                              {fmtTimeOrDash(selectedReportForDetail.completedAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-[10px] text-slate-400">
+                          {language === "th" ? "* เวลาจะขึ้นเมื่อแอดมินกดเปลี่ยนสถานะ (ถ้ายังไม่กดจะเป็น -)" : "* Times appear when admin updates status (otherwise -)."}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  {(selectedReportForDetail.locationAddress || (selectedReportForDetail.latitude && selectedReportForDetail.longitude)) && (
+                    <div className="flex items-start gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#C92A2A] shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                          {language === "th" ? "ตำแหน่งที่เกิดเหตุ" : "Issue Location"}
+                        </p>
+                        <p className="text-xs text-slate-600 leading-relaxed break-words">
+                          {selectedReportForDetail.locationAddress ||
+                            `${Number(selectedReportForDetail.latitude).toFixed(5)}, ${Number(selectedReportForDetail.longitude).toFixed(5)}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
