@@ -404,6 +404,11 @@ export default function DashboardPage() {
   const activeReports = reports.filter((r) => r.status !== "เสร็จสิ้น");
 
   const filteredReports = reports.filter((report) => {
+    // ซ่อนรายการที่ "เสร็จสิ้น" อัตโนมัติ จนกว่าจะเลือกดูจากตัวกรอง
+    if (!selectedStatusFilter && report.status === "เสร็จสิ้น") {
+      return false;
+    }
+
     if (viewMode === 'user' && currentUserId) {
       if (report.user_id !== currentUserId) return false;
     }
@@ -671,7 +676,7 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-bold text-[#0F172A]">
                   {selectedStatusFilter === "เสร็จสิ้น"
                     ? `${t.completed} (${filteredReports.length})`
-                    : `${t.allReports} (${activeReports.length})`}
+                    : `${t.allReports} (${filteredReports.length})`}
                 </h3>
                 {/* Search Bar */}
                 <div className="relative w-full sm:w-72">

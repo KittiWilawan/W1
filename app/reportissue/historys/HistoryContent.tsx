@@ -457,29 +457,7 @@ export default function HistoryContent() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* View Mode Toggle */}
-          {userRole === "admin" && (
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('user')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-              >
-                {t.userView}
-              </button>
-              <button
-                onClick={() => setViewMode('admin')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'admin'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-              >
-                {t.adminView}
-              </button>
-            </div>
-          )}
+
 
           {/* Search Bar */}
           <div className="relative w-full sm:w-64">
@@ -931,9 +909,6 @@ export default function HistoryContent() {
                             </p>
                           </div>
                         </div>
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          {language === "th" ? "* เวลาจะขึ้นเมื่อแอดมินกดเปลี่ยนสถานะ (ถ้ายังไม่กดจะเป็น -)" : "* Times appear when admin updates status (otherwise -)."}
-                        </p>
                       </div>
                     );
                   })()}

@@ -29,6 +29,7 @@ export default function NotificationBell({
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -83,6 +84,36 @@ export default function NotificationBell({
     );
   };
 
+  const markAllAsRead = async () => {
+    if (markingAll || unreadCount === 0) return;
+    setMarkingAll(true);
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {
+        // ignore
+      }
+    }, 20000);
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+        signal: controller.signal,
+      });
+
+      if (res.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+      setMarkingAll(false);
+    }
+  };
+
   const handleNotificationClick = async (notif: AppNotification) => {
     if (!notif.read) {
       await markAsRead(notif.id);
@@ -102,6 +133,7 @@ export default function NotificationBell({
     title: language === "th" ? "การแจ้งเตือน" : "Notifications",
     empty: language === "th" ? "ไม่มีการแจ้งเตือน" : "No notifications",
     viewAll: language === "th" ? "ดูทั้งหมด" : "View all",
+    markAllRead: language === "th" ? "อ่านทั้งหมด" : "Mark all read",
     newReport: language === "th" ? "รายงานใหม่" : "New report",
     statusUpdate: language === "th" ? "อัปเดตสถานะ" : "Status update",
   };
@@ -139,13 +171,26 @@ export default function NotificationBell({
                 </span>
               )}
             </h3>
-            <Link
-              href={getNotificationListPath(userRole)}
-              onClick={() => setOpen(false)}
-              className="text-[10px] font-bold text-blue-600 hover:text-blue-800"
-            >
-              {t.viewAll}
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={markingAll || unreadCount === 0}
+                className={`text-[10px] font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  darkMode ? "text-slate-200 hover:text-white" : "text-slate-600 hover:text-slate-800"
+                }`}
+                title={t.markAllRead}
+              >
+                {markingAll ? (language === "th" ? "กำลังทำ..." : "Marking...") : t.markAllRead}
+              </button>
+              <Link
+                href={getNotificationListPath(userRole)}
+                onClick={() => setOpen(false)}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-800"
+              >
+                {t.viewAll}
+              </Link>
+            </div>
           </div>
 
           <div className="max-h-80 overflow-y-auto">
