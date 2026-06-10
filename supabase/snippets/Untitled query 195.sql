@@ -1,3 +1,4 @@
-alter table public.reports add column if not exists latitude double precision;
-alter table public.reports add column if not exists longitude double precision;
-alter table public.reports add column if not exists location_address text;
+ALTER TABLE public.reports 
+ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS admin_view_mode BOOLEAN DEFAULT FALSE;

@@ -193,7 +193,7 @@ export default function DashboardLayout({
             {/* Main Area */}
             <div className="flex-1 flex flex-col min-w-0">
 
-                <header className={`h-16 flex items-center justify-between px-6 md:px-8 shrink-0 border-b relative z-[1010] transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <header className={`h-16 flex items-center  justify-between px-6 md:px-8 shrink-0 border-b relative z-[1010] transition-colors duration-300 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-center space-x-3">
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}

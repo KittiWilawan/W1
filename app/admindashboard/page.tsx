@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSettings } from "@/app/components/SettingsProvider";
+import RejectModal from "@/app/components/RejectModal";
 import type { MapReportPin } from "@/app/components/IncidentStatusMap";
 import { IncidentStatusMapLoading } from "@/app/components/IncidentStatusMap";
 import {
@@ -40,6 +41,8 @@ export default function DashboardPage() {
   const [savingCompletion, setSavingCompletion] = useState(false);
   const completionFileRef = useRef<HTMLInputElement>(null);
   const [mapExpanded, setMapExpanded] = useState(false);
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   interface MapReportPin {
     id: string;
@@ -82,7 +85,57 @@ export default function DashboardPage() {
         })),
     [reports]
   );
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingReportId, setRejectingReportId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'admin' | 'user'>('admin');
 
+  const handleRejectReport = async (reportId: string, reason: string) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("reports")
+        .update({
+          status: "ปฎิเสธ",
+          rejection_reason: reason,
+          rejected_at: new Date().toISOString(),
+        })
+        .eq("id", reportId);
+
+      if (error) {
+        alert("ไม่สามารถปฎิเสธรายการได้: " + error.message);
+        return;
+      }
+
+      // Send notification to report owner
+      const report = reports.find((r) => r.id === reportId);
+      if (report && report.user_id) {
+        await supabase.from("notifications").insert({
+          user_id: report.user_id,
+          title: "รายการแจ้งเหตุถูกปฎิเสธ",
+          content: `รายการ "${report.subcategory || report.category_title}" ถูกปฎิเสธ\nเหตุผล: ${reason}`,
+          report_id: reportId,
+          read: false,
+        });
+      }
+
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId
+            ? {
+              ...r,
+              status: "ปฎิเสธ",
+              rejection_reason: reason,
+              rejected_at: new Date().toISOString(),
+            }
+            : r
+        )
+      );
+      setShowRejectModal(false);
+      setRejectingReportId(null);
+    } catch (err: any) {
+      alert("เกิดข้อผิดพลาดในการปฎิเสธ");
+    }
+  };
   // โหลดข้อมูล Categories ไว้เฉพาะสำหรับใช้ในตัวกรองปุ่มด้านล่างเท่านั้น (ตัด UI การแสดงผลการ์ดออก)
   const fetchCategories = useCallback(async () => {
     try {
@@ -123,6 +176,16 @@ export default function DashboardPage() {
     fetchCategories();
     fetchReports();
   }, [fetchCategories, fetchReports]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     const reportId = searchParams.get("report") || searchParams.get("reportId");
@@ -261,30 +324,33 @@ export default function DashboardPage() {
   const activeReports = reports.filter((r) => r.status !== "เสร็จสิ้น");
 
   const filteredReports = reports.filter((report) => {
-    if (!selectedStatusFilter && report.status === "เสร็จสิ้น") {
-      return false;
+    // 0. View Mode Filter
+    if (viewMode === 'user' && currentUserId) {
+      if (report.user_id !== currentUserId) return false;
     }
 
+    // 1. Search Query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchesSearch =
+      const matchesSearch = (
         (report.category_title || "").toLowerCase().includes(q) ||
         (report.subcategory || "").toLowerCase().includes(q) ||
         (report.description || "").toLowerCase().includes(q) ||
         (report.contact || "").toLowerCase().includes(q) ||
-        (report.status || "").toLowerCase().includes(q);
+        (report.status || "").toLowerCase().includes(q)
+      );
       if (!matchesSearch) return false;
     }
 
+    // 2. Status Filter
     if (selectedStatusFilter && report.status !== selectedStatusFilter) {
       return false;
     }
 
+    // 3. Category Filter
     if (selectedCategoryFilter) {
-      const matchedCategory = categories.find((c) => c.id === selectedCategoryFilter);
-      const categoryName = matchedCategory
-        ? `${matchedCategory.subtitle} (${matchedCategory.title})`
-        : "";
+      const matchedCategory = categories.find(c => c.id === selectedCategoryFilter);
+      const categoryName = matchedCategory ? `${matchedCategory.subtitle} (${matchedCategory.title})` : "";
 
       const matchesId = report.category_id === selectedCategoryFilter;
       const matchesTitle = categoryName && report.category_title === categoryName;
@@ -340,10 +406,33 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <h1 className="text-3xl font-bold text-[#0F172A]">{t.title}</h1>
-            <p className="text-slate-500 mt-1.5">{t.subtitle}</p>
+            <p className="text-slate-500 mt-1.5">
+              {t.subtitle}
+            </p>
+          </div>
+
+          {/* Mode Toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('admin')}
+              className={`px-4 py-2 rounded-lg font-semibold transition ${viewMode === 'admin'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                }`}
+            >
+              Admin View
+            </button>
+            <button
+              onClick={() => setViewMode('user')}
+              className={`px-4 py-2 rounded-lg font-semibold transition ${viewMode === 'user'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                }`}
+            >
+              User View
+            </button>
           </div>
         </div>
-
 
         {mapReports.length > 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -362,6 +451,7 @@ export default function DashboardPage() {
                 <span className="hidden sm:inline">{mapExpanded ? (language === "th" ? "ย่อ" : "Collapse") : (language === "th" ? "ขยาย" : "Expand")}</span>
               </button>
             </div>
+
 
             {/* ตัว Component แผนที่ตัวจริงที่รับค่าพิกัดไปวาดลงแผนที่ */}
             <IncidentStatusMap
@@ -624,11 +714,14 @@ export default function DashboardPage() {
                             <option value="เสร็จสิ้น">{language === "th" ? "เสร็จสิ้น" : "Completed"}</option>
                           </select>
                           <button
-                            onClick={() => handleDeleteReport(report.id)}
-                            className="p-0.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
-                            title={language === "th" ? "ลบรายการ" : "Delete"}
+                            onClick={() => {
+                              setRejectingReportId(report.id);
+                              setShowRejectModal(true);
+                            }}
+                            className="p-1 text-slate-300 hover:text-red-600 transition cursor-pointer ml-0.5"
+                            title={language === "th" ? "ปฎิเสธรายการ" : "Reject"}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <X className="w-3 h-3" />
                           </button>
                         </div>
                       </div>

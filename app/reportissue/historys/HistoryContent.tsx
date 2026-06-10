@@ -23,6 +23,7 @@ import {
   MapPin,
   ChevronUp,
   ChevronDown,
+  Eye,
 } from "lucide-react";
 import { useSettings } from "@/app/components/SettingsProvider";
 import { compressImage } from "@/app/lib/image-utils";
@@ -77,6 +78,10 @@ export default function HistoryContent() {
   // Map navigation state
   const [activePinIndex, setActivePinIndex] = useState<number>(0);
   const [mapKey, setMapKey] = useState(0);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<'admin' | 'user'>('user');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,6 +154,22 @@ export default function HistoryContent() {
       cancelled = true;
     };
   }, [router, language]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch("/api/auth/user");
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUserId(data.id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch current user:", err);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     const reportId = searchParams.get("report");
@@ -241,6 +262,9 @@ export default function HistoryContent() {
     nextPin: language === "th" ? "หมุดถัดไป" : "Next pin",
     pinOf: language === "th" ? "จุดที่" : "Pin",
     of: language === "th" ? "จาก" : "of",
+    viewMode: language === "th" ? "โหมดดู: " : "View Mode: ",
+    adminView: language === "th" ? "ดูทั้งหมด" : "All Reports",
+    userView: language === "th" ? "รายการของฉัน" : "My Reports",
   };
 
   const handleDeleteReport = async (id: string) => {
@@ -357,32 +381,16 @@ export default function HistoryContent() {
     [reports]
   );
 
-  // Navigate to previous pin
   const goPrevPin = useCallback(() => {
     if (mapReports.length === 0) return;
     const newIndex = (activePinIndex - 1 + mapReports.length) % mapReports.length;
     setActivePinIndex(newIndex);
-    // Scroll to corresponding report card
-    const pin = mapReports[newIndex];
-    if (pin) {
-      document.getElementById(`report-${pin.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      setHighlightedReportId(pin.id);
-      setTimeout(() => setHighlightedReportId(null), 2500);
-    }
   }, [activePinIndex, mapReports]);
 
-  // Navigate to next pin
   const goNextPin = useCallback(() => {
     if (mapReports.length === 0) return;
     const newIndex = (activePinIndex + 1) % mapReports.length;
     setActivePinIndex(newIndex);
-    // Scroll to corresponding report card
-    const pin = mapReports[newIndex];
-    if (pin) {
-      document.getElementById(`report-${pin.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      setHighlightedReportId(pin.id);
-      setTimeout(() => setHighlightedReportId(null), 2500);
-    }
   }, [activePinIndex, mapReports]);
 
   if (loading) {
@@ -409,6 +417,12 @@ export default function HistoryContent() {
   }
 
   const filteredReports = reports.filter((report) => {
+    // View mode filter
+    if (viewMode === 'user' && currentUserId) {
+      if (report.latitude == null || report.longitude == null) return false;
+    }
+
+    // Search query filter
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -433,7 +447,31 @@ export default function HistoryContent() {
             {t.headerSubtitle}
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1">
+            <button
+              onClick={() => setViewMode('user')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'user'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+                }`}
+            >
+              {t.userView}
+            </button>
+            <button
+              onClick={() => setViewMode('admin')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'admin'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+                }`}
+            >
+              {t.adminView}
+            </button>
+          </div>
+
+          {/* Search Bar */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -441,7 +479,7 @@ export default function HistoryContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t.searchPlaceholder}
-              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition duration-200 outline-none text-gray-900"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition duration-200 outline-none"
             />
             {searchQuery && (
               <button
@@ -452,7 +490,6 @@ export default function HistoryContent() {
               </button>
             )}
           </div>
-
 
           <Link
             href="/reportissue"
@@ -543,6 +580,7 @@ export default function HistoryContent() {
                   key={pin.id}
                   onClick={() => {
                     setActivePinIndex(idx);
+                    // Scroll to report card
                     document.getElementById(`report-${pin.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
                     setHighlightedReportId(pin.id);
                     setTimeout(() => setHighlightedReportId(null), 2500);
